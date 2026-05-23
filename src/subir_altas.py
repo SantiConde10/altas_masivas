@@ -82,8 +82,25 @@ def run(playwright: Playwright) -> None:
             page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
             page.locator("button.list-group-item", has_text=val_u_venta).click()
 
-        fecha_1 = pd.to_datetime(row['Fecha 1'], dayfirst=True).strftime('%Y-%m-%d') if pd.notna(row['Fecha 1']) else ""
-        fecha_2 = pd.to_datetime(row['Fecha 2'], dayfirst=True).strftime('%Y-%m-%d') if pd.notna(row['Fecha 2']) else ""
+        fecha_1 = ""
+        val_fecha_1 = clean_val(row['Fecha 1'])
+        if val_fecha_1:
+            try:
+                dt1 = pd.to_datetime(val_fecha_1, dayfirst=True)
+                if pd.notna(dt1):
+                    fecha_1 = dt1.strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"Error parseando Fecha 1 '{val_fecha_1}': {e}")
+
+        fecha_2 = ""
+        val_fecha_2 = clean_val(row['Fecha 2'])
+        if val_fecha_2:
+            try:
+                dt2 = pd.to_datetime(val_fecha_2, dayfirst=True)
+                if pd.notna(dt2):
+                    fecha_2 = dt2.strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"Error parseando Fecha 2 '{val_fecha_2}': {e}")
         
         if fecha_1:
             page.locator("#Vigencia").fill(fecha_1)
