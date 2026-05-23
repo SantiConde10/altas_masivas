@@ -125,12 +125,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, false);
   }
 
-  function handleFileSelectionWithPath(filePath, fileName) {
+  async function handleFileSelectionWithPath(filePath, fileName) {
     selectedFilePath = filePath;
     fileNameDisplay.textContent = fileName;
     fileNameDisplay.classList.add('active');
-    if (runBtn) runBtn.disabled = false;
-    setStatus('idle', 'Listo para iniciar');
+    
+    if (runBtn) runBtn.disabled = true;
+    setStatus('running', 'Validando estructura del archivo...');
+
+    try {
+      const result = await window.electronAPI.validateCSVFile(filePath);
+      if (result.valid) {
+        if (runBtn) runBtn.disabled = false;
+        setStatus('success', 'Listo, puedes empezar');
+      } else {
+        selectedFilePath = null;
+        fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+        fileNameDisplay.classList.remove('active');
+        if (runBtn) runBtn.disabled = true;
+        setStatus('error', `Archivo inválido: ${result.reason}`);
+        alert(`Error al validar archivo: ${result.reason}`);
+      }
+    } catch (err) {
+      console.error('Validation error:', err);
+      if (runBtn) runBtn.disabled = false;
+      setStatus('idle', 'Listo para iniciar');
+    }
   }
 
   function handleFileSelection(file) {

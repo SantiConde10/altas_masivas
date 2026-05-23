@@ -361,6 +361,8 @@ def run(playwright: Playwright) -> None:
             print(f"RESULTADO | FILA: {index+1} | ESTADO: ERROR | SKU: {row['SKU']} | MOTIVO: {str(e)}")
             if "Target page, context or browser has been closed" in str(e):
                 break
+    
+    page.pause()
 
     # ---------------------
     context.close()
