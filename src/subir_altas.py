@@ -209,6 +209,9 @@ def run(playwright: Playwright) -> None:
         if val_categoria_completa:
             page.get_by_role("button").filter(has_text="--SELECCIONA--").click()
             page.get_by_role("button").filter(has_text=re.compile(rf"^{re.escape(val_categoria_completa)}$", re.IGNORECASE)).first.click()
+            page.get_by_role("button", name="").click()
+
+        page.pause()
 
         # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
         
@@ -343,6 +346,10 @@ def run(playwright: Playwright) -> None:
         if val_tipo_armado:
             click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
 
+        # –– Guardar –––––––––––––––––––––––––––––––––––
+        
+        page.get_by_role("button", name=" Guardar").click()
+        
         page.pause()
 
     # ---------------------
