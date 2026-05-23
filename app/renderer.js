@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       splashScreen.style.display = 'none';
     }, 800); // match transition duration (0.8s)
-  }, 2800); // duration of loader progress (2s + buffer)
+  }, 3800); // duration of loader progress (3s + buffer)
 
   // Navigation Logic
   const navBtns = document.querySelectorAll('.nav-btn');

@@ -104,7 +104,7 @@ body {
   width: 0%;
   height: 100%;
   background-color: var(--primary-color);
-  animation: progressFill 2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s forwards;
+  animation: progressFill 3s cubic-bezier(0.22, 1, 0.36, 1) 0.8s forwards;
 }
 
 .splash-slogan {
