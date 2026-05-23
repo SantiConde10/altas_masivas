@@ -55,69 +55,226 @@ document.addEventListener('DOMContentLoaded', async () => {
   const runBtn = document.getElementById('run-btn');
   const btnText = document.getElementById('btn-text');
   const statusIndicator = document.getElementById('status-indicator');
-  const statusText = statusIndicator.querySelector('.status-text');
-  const consoleOutput = document.getElementById('console-output');
-  const clearBtn = document.getElementById('clear-btn');
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileNameDisplay = document.getElementById('file-name-display');
 
   let isRunning = false;
-
-  function appendLog(message, type = 'normal') {
-    const logLine = document.createElement('div');
-    logLine.className = `log-line ${type}`;
-    logLine.textContent = message;
-    consoleOutput.appendChild(logLine);
-    
-    // Auto scroll to bottom
-    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-  }
+  let selectedFilePath = null;
+  let totalRows = 0;
+  let successRows = 0;
+  let errorRows = 0;
 
   function setStatus(status, text) {
-    statusIndicator.className = `status ${status}`;
-    statusText.textContent = text;
+    if (statusIndicator) {
+      statusIndicator.className = `status ${status}`;
+      const statusText = statusIndicator.querySelector('.status-text');
+      if (statusText) statusText.textContent = text;
+    }
   }
 
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      consoleOutput.innerHTML = '';
+  // Handle file selection / drop
+  if (dropZone) {
+    dropZone.addEventListener('click', async () => {
+      if (isRunning) return;
+      try {
+        const filePath = await window.electronAPI.selectCSVFile();
+        if (filePath) {
+          const pathParts = filePath.split(/[/\\]/);
+          const fileName = pathParts[pathParts.length - 1];
+          handleFileSelectionWithPath(filePath, fileName);
+        }
+      } catch (err) {
+        console.error('Error selecting file via dialog:', err);
+        if (fileInput) fileInput.click();
+      }
     });
+
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFileSelection(e.target.files[0]);
+        }
+      });
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isRunning) return;
+        dropZone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      if (isRunning) return;
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        handleFileSelection(files[0]);
+      }
+    }, false);
+  }
+
+  function handleFileSelectionWithPath(filePath, fileName) {
+    selectedFilePath = filePath;
+    fileNameDisplay.textContent = fileName;
+    fileNameDisplay.classList.add('active');
+    if (runBtn) runBtn.disabled = false;
+    setStatus('idle', 'Listo para iniciar');
+  }
+
+  function handleFileSelection(file) {
+    if (!file.name.endsWith('.csv')) {
+      alert('Por favor, selecciona un archivo CSV válido.');
+      return;
+    }
+    const path = file.path;
+    if (!path) {
+      alert('No se pudo obtener la ruta real del archivo mediante drag and drop. Por favor, haz click en el recuadro para seleccionarlo mediante el diálogo del sistema.');
+      return;
+    }
+    handleFileSelectionWithPath(path, file.name);
   }
 
   if (runBtn) {
     runBtn.addEventListener('click', () => {
-      if (isRunning) return;
+      if (isRunning || !selectedFilePath) return;
 
       isRunning = true;
       runBtn.disabled = true;
-      btnText.textContent = 'Ejecutando...';
+      if (dropZone) dropZone.style.pointerEvents = 'none';
+      if (btnText) btnText.textContent = 'Ejecutando...';
       setStatus('running', 'Procesando altas...');
+
+      // Reset values
+      totalRows = 0;
+      successRows = 0;
+      errorRows = 0;
       
-      appendLog('--- Iniciando carga masiva ---', 'info');
-      
-      // Call main process to run python
-      window.electronAPI.runPythonScript();
+      const successCountEl = document.getElementById('success-count');
+      const errorCountEl = document.getElementById('error-count');
+      const progressBarFillEl = document.getElementById('progress-bar-fill');
+      const progressCountEl = document.getElementById('progress-count');
+      const progressPercentageEl = document.getElementById('progress-percentage');
+      const progressSubtextEl = document.getElementById('progress-subtext');
+      const progressPanelEl = document.getElementById('progress-panel');
+
+      if (successCountEl) successCountEl.textContent = '0';
+      if (errorCountEl) errorCountEl.textContent = '0';
+      if (progressBarFillEl) progressBarFillEl.style.width = '0%';
+      if (progressCountEl) progressCountEl.textContent = '0 / 0';
+      if (progressPercentageEl) progressPercentageEl.textContent = '0%';
+      if (progressSubtextEl) progressSubtextEl.textContent = 'Iniciando proceso...';
+      if (progressPanelEl) progressPanelEl.style.display = 'flex';
+
+      window.electronAPI.runPythonScript(selectedFilePath);
     });
+  }
+
+  function updateProgress() {
+    const processed = successRows + errorRows;
+    const progressCountEl = document.getElementById('progress-count');
+    const progressPercentageEl = document.getElementById('progress-percentage');
+    const progressBarFillEl = document.getElementById('progress-bar-fill');
+
+    if (totalRows > 0) {
+      const percentage = Math.min(100, Math.round((processed / totalRows) * 100));
+      if (progressCountEl) progressCountEl.textContent = `${processed} / ${totalRows}`;
+      if (progressPercentageEl) progressPercentageEl.textContent = `${percentage}%`;
+      if (progressBarFillEl) progressBarFillEl.style.width = `${percentage}%`;
+    } else {
+      if (progressCountEl) progressCountEl.textContent = `${processed} procesados`;
+    }
   }
 
   // Listen for logs from Python
   window.electronAPI.onPythonLog((data) => {
-    appendLog(data.trim());
+    const lines = data.split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      const progressSubtextEl = document.getElementById('progress-subtext');
+
+      // Check for total rows line
+      if (trimmed.includes('Total de SKUs a subir (cantidad de filas):')) {
+        const match = trimmed.match(/Total de SKUs a subir \(cantidad de filas\):\s*(\d+)/);
+        if (match) {
+          totalRows = parseInt(match[1], 10);
+          updateProgress();
+          if (progressSubtextEl) {
+            progressSubtextEl.textContent = `Se detectaron ${totalRows} SKUs. Iniciando Playwright...`;
+          }
+        }
+      }
+
+      // Check for current processing row
+      if (trimmed.startsWith('--- Fila') && trimmed.includes('/')) {
+        const cleanMessage = trimmed.replace(/---/g, '').trim();
+        if (progressSubtextEl) progressSubtextEl.textContent = cleanMessage;
+      }
+
+      // Check for OK result
+      if (trimmed.includes('RESULTADO') && trimmed.includes('ESTADO: OK')) {
+        successRows++;
+        const successCountEl = document.getElementById('success-count');
+        if (successCountEl) successCountEl.textContent = successRows;
+        updateProgress();
+      }
+
+      // Check for ERROR result
+      if (trimmed.includes('RESULTADO') && trimmed.includes('ESTADO: ERROR')) {
+        errorRows++;
+        const errorCountEl = document.getElementById('error-count');
+        if (errorCountEl) errorCountEl.textContent = errorRows;
+        
+        const matchReason = trimmed.match(/MOTIVO:\s*(.*)/);
+        const reasonStr = matchReason ? `: ${matchReason[1]}` : '';
+        const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
+        const skuStr = matchSku ? ` SKU ${matchSku[1]}` : ' Fila';
+
+        if (progressSubtextEl) {
+          progressSubtextEl.textContent = `Error en${skuStr}${reasonStr}`;
+        }
+        updateProgress();
+      }
+    });
   });
 
   window.electronAPI.onPythonError((data) => {
-    appendLog(data.trim(), 'error');
+    console.error('Python error:', data);
+    const progressSubtextEl = document.getElementById('progress-subtext');
+    if (progressSubtextEl && (data.includes('Traceback') || data.includes('Error'))) {
+      const lines = data.split('\n');
+      const lastLine = lines.filter(l => l.trim()).pop() || '';
+      progressSubtextEl.textContent = `Error: ${lastLine.trim()}`;
+    }
   });
 
   window.electronAPI.onPythonFinished((code) => {
     isRunning = false;
-    runBtn.disabled = false;
+    if (runBtn) runBtn.disabled = false;
+    if (dropZone) dropZone.style.pointerEvents = 'auto';
     if (btnText) btnText.textContent = 'Iniciar Carga Masiva';
     
+    const progressSubtextEl = document.getElementById('progress-subtext');
+
     if (code === 0) {
       setStatus('success', 'Proceso completado con éxito');
-      appendLog(`--- Proceso finalizado (Código ${code}) ---`, 'success');
+      if (progressSubtextEl) progressSubtextEl.textContent = 'Carga finalizada correctamente.';
     } else {
       setStatus('error', `Error en el proceso (Código ${code})`);
-      appendLog(`--- Proceso fallido con código ${code} ---`, 'error');
+      if (progressSubtextEl) progressSubtextEl.textContent = `El proceso terminó con error (Código ${code}).`;
     }
   });
 });

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -36,17 +36,37 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// Handle opening a native file selection dialog
+ipcMain.handle('select-csv-file', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+  return result.filePaths[0];
+});
+
 // Handle executing the python script
-ipcMain.on('run-python-script', (event) => {
+ipcMain.on('run-python-script', (event, filePath) => {
   const pythonPath = path.join(__dirname, '..', '.venv', 'bin', 'python');
   const scriptPath = path.join(__dirname, '..', 'src', 'subir_altas.py');
   const cwdPath = path.join(__dirname, '..');
 
   console.log(`Ejecutando Python desde: ${pythonPath}`);
   console.log(`Script: ${scriptPath}`);
+  if (filePath) {
+    console.log(`Con archivo seleccionado: ${filePath}`);
+  }
+
+  const args = ['-u', scriptPath];
+  if (filePath) {
+    args.push(filePath);
+  }
 
   // We run python in unbuffered mode (-u) so we get logs immediately
-  const pythonProcess = spawn(pythonPath, ['-u', scriptPath], {
+  const pythonProcess = spawn(pythonPath, args, {
     cwd: cwdPath
   });
 

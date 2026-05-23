@@ -2,20 +2,24 @@ import pandas as pd
 from pathlib import Path
 import glob
 
-def transformar_df():
+def transformar_df(custom_path=None):
 
     # Buscar cualquier archivo CSV en la carpeta data/
     # Calculamos la ruta relativa a la raíz del proyecto (alta_masiva)
     data_dir = Path(__file__).parent.parent / "data"
     
     try:
-        csv_files = list(data_dir.glob("*.csv"))
-        if not csv_files:
-            print(f"Error: No se encontró ningún archivo .csv en la ruta {data_dir}")
-            return None
-        
-        # Usamos el primer CSV encontrado
-        archivo_path = csv_files[0]
+        if custom_path:
+            archivo_path = Path(custom_path)
+        else:
+            csv_files = list(data_dir.glob("*.csv"))
+            if not csv_files:
+                print(f"Error: No se encontró ningún archivo .csv en la ruta {data_dir}")
+                return None
+            
+            # Usamos el primer CSV encontrado
+            archivo_path = csv_files[0]
+            
         print(f"Leyendo archivo de datos: {archivo_path.name}")
         df = pd.read_csv(archivo_path, skiprows=2, keep_default_na=False)
     except Exception as e:
