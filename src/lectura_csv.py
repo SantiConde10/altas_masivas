@@ -24,8 +24,8 @@ def transformar_df():
 
     # 2. Transformación de columnas y creación de Grupo
     try:
-        df['Agregar SKU'] = df.apply(lambda row: {row['Agregar SKU']: row['Cantidad']} if pd.notna(row['Agregar SKU']) else {}, axis=1)
-        df['Grupo'] = df['PROVEEDOR'].ffill()
+        df['Agregar SKU'] = df.apply(lambda row: {row['Agregar SKU']: row['Cantidad']} if str(row['Agregar SKU']).strip() != '' else {}, axis=1)
+        df['Grupo'] = df['PROVEEDOR'].replace('', None).ffill()
     except KeyError as e:
         print(f"Error: Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
         return None
