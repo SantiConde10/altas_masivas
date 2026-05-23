@@ -32,7 +32,9 @@ def clean_val(val):
 
 def click_dropdown_option(page, label_text, value):
     page.locator("label").filter(has_text=label_text).locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-    page.get_by_role("button", name=re.compile(rf"^{re.escape(value)}$", re.IGNORECASE)).click()
+    val_lower = value.lower()
+    xpath = f'//button[not(contains(@class, "form-control"))][translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑÜ", "abcdefghijklmnopqrstuvwxyzáéíóúñü") = "{val_lower}"]'
+    page.locator(xpath).first.click()
 
 def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False) # slow_mo=100
@@ -83,8 +85,7 @@ def run(playwright: Playwright) -> None:
         # U. Venta
         val_u_venta = clean_val(row['U.VENTA'])
         if val_u_venta:
-            page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.locator("button.list-group-item", has_text=re.compile(rf"^{re.escape(val_u_venta)}$", re.IGNORECASE)).click()
+            click_dropdown_option(page, "U. Venta", val_u_venta)
 
         fecha_1 = ""
         val_fecha_1 = clean_val(row['Fecha 1'])
@@ -207,7 +208,8 @@ def run(playwright: Playwright) -> None:
         val_categoria_completa = clean_val(row['CATEGORÍA COMPLETA'])
         if val_categoria_completa:
             page.get_by_role("button", name="--SELECCIONA--").click()
-            page.get_by_role("button", name=re.compile(rf"^{re.escape(val_categoria_completa)}$", re.IGNORECASE)).click()
+            xpath = f'//button[not(contains(@class, "form-control"))][translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑÜ", "abcdefghijklmnopqrstuvwxyzáéíóúñü") = "{val_categoria_completa.lower()}"]'
+            page.locator(xpath).first.click()
 
         # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
         
