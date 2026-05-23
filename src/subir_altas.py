@@ -207,9 +207,8 @@ def run(playwright: Playwright) -> None:
         # Categoria Completa
         val_categoria_completa = clean_val(row['CATEGORÍA COMPLETA'])
         if val_categoria_completa:
-            page.get_by_role("button", name="--SELECCIONA--").click()
-            xpath = f'//button[not(contains(@class, "form-control"))][translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑÜ", "abcdefghijklmnopqrstuvwxyzáéíóúñü") = "{val_categoria_completa.lower()}"]'
-            page.locator(xpath).first.click()
+            page.get_by_role("button").filter(has_text="--SELECCIONA--").click()
+            page.get_by_role("button").filter(has_text=re.compile(rf"^{re.escape(val_categoria_completa)}$", re.IGNORECASE)).first.click()
 
         # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
         
