@@ -41,11 +41,121 @@ body {
   overflow: hidden;
 }
 
-/* Layout */
+/* Splash / Hero Screen */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+  opacity: 1;
+}
+
+.splash-screen.fade-out {
+  opacity: 0;
+  transform: translateY(-30px);
+  pointer-events: none;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.splash-logo {
+  max-width: 220px;
+  height: auto;
+  opacity: 0;
+  transform: scale(0.9);
+  animation: logoIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+}
+
+.splash-subtitle {
+  font-size: 0.8rem;
+  letter-spacing: 0.5em;
+  color: #888;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: slideUpIn 0.8s ease 0.6s forwards;
+}
+
+.splash-loader {
+  width: 160px;
+  height: 2px;
+  background-color: #e5e5e5;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  opacity: 0;
+  animation: fadeIn 0.5s ease 0.8s forwards;
+}
+
+.loader-progress {
+  width: 0%;
+  height: 100%;
+  background-color: var(--primary-color);
+  animation: progressFill 2s cubic-bezier(0.22, 1, 0.36, 1) 0.8s forwards;
+}
+
+.splash-slogan {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: #aaaaaa;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 1.2s forwards;
+}
+
+/* Animations */
+@keyframes logoIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUpIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes progressFill {
+  to {
+    width: 100%;
+  }
+}
+
+/* Layout (Inicialmente oculto/sutil hasta que cargue) */
 .app-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 1s cubic-bezier(0.25, 1, 0.5, 1), transform 1s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.app-layout.show {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Sidebar */
