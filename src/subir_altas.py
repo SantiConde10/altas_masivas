@@ -30,6 +30,10 @@ def clean_val(val):
             pass
     return val_str
 
+def click_dropdown_option(page, label_text, value):
+    page.locator("label").filter(has_text=label_text).locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name=re.compile(rf"^{re.escape(value)}$", re.IGNORECASE)).click()
+
 def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False) # slow_mo=100
     context = browser.new_context()
@@ -54,8 +58,7 @@ def run(playwright: Playwright) -> None:
         # Proveedor 
         val_proveedor = clean_val(row['PROVEEDOR'])
         if val_proveedor:
-            page.locator("label").filter(has_text="Proveedor").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_proveedor).click()
+            click_dropdown_option(page, "Proveedor", val_proveedor)
 
         # SKU 
         page.locator("#SKU").click()
@@ -81,7 +84,7 @@ def run(playwright: Playwright) -> None:
         val_u_venta = clean_val(row['U.VENTA'])
         if val_u_venta:
             page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.locator("button.list-group-item", has_text=val_u_venta).click()
+            page.locator("button.list-group-item", has_text=re.compile(rf"^{re.escape(val_u_venta)}$", re.IGNORECASE)).click()
 
         fecha_1 = ""
         val_fecha_1 = clean_val(row['Fecha 1'])
@@ -128,98 +131,83 @@ def run(playwright: Playwright) -> None:
         # Linea
         val_linea = clean_val(row['LINEA'])
         if val_linea:
-            page.locator("label").filter(has_text="Linea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_linea, exact=True).click()
+            click_dropdown_option(page, "Linea", val_linea)
 
         # Modelo
         val_modelo = clean_val(row['MODELO'])
         if val_modelo:
-            page.locator("label").filter(has_text="Modelo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_modelo, exact=True).click()
+            click_dropdown_option(page, "Modelo", val_modelo)
 
         # Tipo de articulo
         val_tipo_articulo = clean_val(row['TIPO ARTICULO'])
         if val_tipo_articulo:
-            page.locator("label").filter(has_text="Tipo Articulo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_tipo_articulo, exact=True).click()
+            click_dropdown_option(page, "Tipo Articulo", val_tipo_articulo)
 
         # Marca
         val_marca = clean_val(row['MARCA'])
         if val_marca:
-            page.locator("label").filter(has_text="Marca").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_marca, exact=True).click()
+            click_dropdown_option(page, "Marca", val_marca)
 
         # Categoria
         val_categoria = clean_val(row['CATEGORIA'])
         if val_categoria:
-            page.locator("label").filter(has_text="Categoría").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_categoria, exact=True).click()
+            click_dropdown_option(page, "Categoría", val_categoria)
 
         # Sublinea
         val_sublinea = clean_val(row['SUBLINEA'])
         if val_sublinea:
-            page.locator("label").filter(has_text="Sublinea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_sublinea, exact=True).click()
+            click_dropdown_option(page, "Sublinea", val_sublinea)
 
         # Subcatart
         val_subcatart = clean_val(row['SUBCATART'])
         if val_subcatart:
-            page.locator("label").filter(has_text="Subcatart").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_subcatart, exact=True).click()
+            click_dropdown_option(page, "Subcatart", val_subcatart)
 
         # Clasificacion precio
         val_clasificacion_precio = clean_val(row['CLASIFICACION PRECIO'])
         if val_clasificacion_precio:
-            page.locator("label").filter(has_text="Clasificación de Precio").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_clasificacion_precio, exact=True).click()
+            click_dropdown_option(page, "Clasificación de Precio", val_clasificacion_precio)
 
         # Carpeta de vida
         val_carpeta_vida = clean_val(row['CARPETA DE VIDA'])
         if val_carpeta_vida:
-            page.locator("label").filter(has_text="Carpeta de Vida").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_carpeta_vida, exact=True).click()
+            click_dropdown_option(page, "Carpeta de Vida", val_carpeta_vida)
 
         # Subtipo
         val_subtipo = clean_val(row['SUBTIPO'])
         if val_subtipo:
-            page.locator("label").filter(has_text="SubTipo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_subtipo, exact=True).click()
+            click_dropdown_option(page, "SubTipo", val_subtipo)
 
         # U. compra
         val_u_compra = clean_val(row['U.COMPRA'])
         if val_u_compra:
-            page.locator("label").filter(has_text="U. Compra").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_u_compra, exact=True).click()
+            click_dropdown_option(page, "U. Compra", val_u_compra)
 
         # Estilo
         val_estilo = clean_val(row['ESTILO'])
         if val_estilo:
-            page.locator("label").filter(has_text="Estilo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_estilo, exact=True).click()
+            click_dropdown_option(page, "Estilo", val_estilo)
 
         # Familia
         val_familia = clean_val(row['FAMILIA'])
         if val_familia:
-            page.locator("label").filter(has_text="Familia").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_familia, exact=True).click()
+            click_dropdown_option(page, "Familia", val_familia)
 
         # TIPO GAIA
         val_tipo_gaia = clean_val(row['TIPO GAIA'])
         if val_tipo_gaia:
-            page.locator("label").filter(has_text="TIPO GAIA").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_tipo_gaia, exact=True).click()
+            click_dropdown_option(page, "TIPO GAIA", val_tipo_gaia)
 
         # Visibilidad
         val_visibilidad = clean_val(row['VISIBILIDAD'])
         if val_visibilidad:
-            page.locator("label").filter(has_text="Visibilidad").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_visibilidad, exact=True).click()
+            click_dropdown_option(page, "Visibilidad", val_visibilidad)
 
         # Categoria Completa
         val_categoria_completa = clean_val(row['CATEGORÍA COMPLETA'])
         if val_categoria_completa:
             page.get_by_role("button", name="--SELECCIONA--").click()
-            page.get_by_role("button", name=val_categoria_completa, exact=True).click()
+            page.get_by_role("button", name=re.compile(rf"^{re.escape(val_categoria_completa)}$", re.IGNORECASE)).click()
 
         # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
         
@@ -228,8 +216,7 @@ def run(playwright: Playwright) -> None:
         # Tiempo de entrega a Clientes
         val_tiempo_entrega_clientes = clean_val(row['TIEMPO DE ENTREGA A CLIENTES'])
         if val_tiempo_entrega_clientes:
-            page.locator("label").filter(has_text="Tiempo de entrega a Clientes").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_tiempo_entrega_clientes, exact=True).click()
+            click_dropdown_option(page, "Tiempo de entrega a Clientes", val_tiempo_entrega_clientes)
 
         # Tiempo de producción
         val_tiempo_produccion = clean_val(row['TIEMPO DE PRODUCCION'])
@@ -249,8 +236,7 @@ def run(playwright: Playwright) -> None:
         # Comportamiento bajo el umbral
         val_comportamiento_umbral = clean_val(row['COMPORTAMIENTO BAJO EL UMBRAL'])
         if val_comportamiento_umbral:
-            page.locator("label").filter(has_text="Comportamiento bajo umbral").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_comportamiento_umbral, exact=True).click()
+            click_dropdown_option(page, "Comportamiento bajo umbral", val_comportamiento_umbral)
 
         # –– Costeo –––––––––––––––––––––––––––––––––––
 
@@ -263,8 +249,7 @@ def run(playwright: Playwright) -> None:
         # Moneda
         val_moneda = clean_val(row['MONEDA'])
         if val_moneda:
-            page.locator("label").filter(has_text="Moneda").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_moneda, exact=True).click()
+            click_dropdown_option(page, "Moneda", val_moneda)
         
         # –– Material –––––––––––––––––––––––––––––––––––
 
@@ -273,26 +258,22 @@ def run(playwright: Playwright) -> None:
         # Material
         val_material = clean_val(row['MATERIAL'])
         if val_material:
-            page.locator("label").filter(has_text="Material").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_material, exact=True).click()
+            click_dropdown_option(page, "Material", val_material)
 
         # Color
         val_color = clean_val(row['COLOR'])
         if val_color:
-            page.locator("label").filter(has_text="Color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_color, exact=True).click()
+            click_dropdown_option(page, "Color", val_color)
 
         # Familia de color
         val_familia_color = clean_val(row['FAMILIA DE COLOR'])
         if val_familia_color:
-            page.locator("label").filter(has_text="Familia de color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_familia_color, exact=True).click()
+            click_dropdown_option(page, "Familia de color", val_familia_color)
 
         # Material Principal
         val_material_principal = clean_val(row['MATERIAL PRINCIPAL'])
         if val_material_principal:
-            page.locator("label").filter(has_text="Material principal").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_material_principal, exact=True).click()
+            click_dropdown_option(page, "Material principal", val_material_principal)
 
         # Tipo de tela
         page.locator("[id=\"Tipo de tela\"]").click()
@@ -359,8 +340,7 @@ def run(playwright: Playwright) -> None:
         # Tipo de armado
         val_tipo_armado = clean_val(row['TIPO ARMADO'])
         if val_tipo_armado:
-            page.locator("label").filter(has_text="Tipo Armado").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-            page.get_by_role("button", name=val_tipo_armado, exact=True).click()
+            click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
 
         # page.pause()
 
