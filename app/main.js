@@ -50,7 +50,10 @@ ipcMain.handle('select-csv-file', async () => {
 
 // Handle executing the python script
 ipcMain.on('run-python-script', (event, filePath) => {
-  const pythonPath = path.join(__dirname, '..', '.venv', 'bin', 'python');
+  const isWin = process.platform === 'win32';
+  const pythonPath = isWin
+    ? path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')
+    : path.join(__dirname, '..', '.venv', 'bin', 'python');
   const scriptPath = path.join(__dirname, '..', 'src', 'subir_altas.py');
   const cwdPath = path.join(__dirname, '..');
 
