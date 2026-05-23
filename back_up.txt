@@ -1,0 +1,279 @@
+import re
+import time
+import os
+from playwright.sync_api import Playwright, sync_playwright, expect
+from dotenv import load_dotenv
+
+load_dotenv("secrets/.env")
+
+usuario = os.getenv("USUARIO")
+password = os.getenv("PASSWORD")
+url_gaia = os.getenv("URL")
+
+
+def run(playwright: Playwright) -> None:
+    browser = playwright.chromium.launch(headless=False) # slow_mo=100
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto(url_gaia)
+    page.wait_for_load_state("networkidle")
+    page.get_by_role("textbox", name="Usuario").fill(usuario)
+    page.get_by_role("textbox", name="Contraseña").click()
+    page.get_by_role("textbox", name="Contraseña").fill(password)
+    page.get_by_role("button", name="INICIAR SESIÓN").click()
+    page.wait_for_load_state("networkidle")
+
+    page.get_by_role("textbox", name="Menú: busca módulos").click()
+    page.get_by_role("button", name=" Inventarios ▸").click()
+    page.get_by_role("button", name=" Nuevo Articulo").click()
+
+    # –– Datos de interacción con ventas –––––––––––––––––––––––––––––––––––
+    
+    # Proveedor 
+    page.locator("label").filter(has_text="Proveedor").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="COLCHONES Y SALAS DE MEXICO").click()
+
+    # SKU 
+    page.locator("#SKU").click()
+    page.locator("#SKU").fill("1801")
+
+    # Nombre 
+    page.locator("#Nombre").click()
+    page.locator("#Nombre").fill("Andrea")
+
+    # Descripción 
+    page.locator("[id=\"Descripción\"]").click()
+    page.locator("[id=\"Descripción\"]").fill("Set modular de 3 plazas con chaise derecho, Andrea marfil ")
+
+    # SKU 2
+    page.locator("[id=\"SKU 2\"]").click()
+    page.locator("[id=\"SKU 2\"]").fill("184.1801")
+
+    # CANALVENTAS
+    page.get_by_role("button", name="Seleccionar ▾").click()
+    page.get_by_text("Seleccionar todos").click()
+
+    # page.locator("label").filter(has_text=re.compile(r"^WEB$")).click()
+    # page.locator("label").filter(has_text=re.compile(r"^Sucursales$")).click()
+    
+    # U. Venta
+    page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.locator("button.list-group-item", has_text="Conjunto").click()
+
+    page.locator("#Vigencia").fill("2026-05-20")
+    page.locator("input[type=\"date\"]").nth(1).fill("2030-12-31")
+    
+    # --- Agregar sku 1 ---
+    page.locator("[id=\"Agregar SKU\"]").click()
+    page.locator("[id=\"Agregar SKU\"]").fill("184.1.A.27.18 ")
+    page.get_by_role("button").filter(has_text="").click()
+    page.get_by_role("gridcell", name="1", exact=True).click()
+    page.get_by_role("spinbutton", name="Columna Cantidad").fill("1")
+
+    # --- Agregar sku 2 ---
+    page.locator("[id=\"Agregar SKU\"]").click()
+    page.locator("[id=\"Agregar SKU\"]").fill("184.1.A.17.18")
+    page.get_by_role("button").filter(has_text="").click()
+    page.get_by_role("gridcell", name="1").nth(2).click()
+    page.get_by_role("spinbutton", name="Columna Cantidad").fill("2")
+
+    # –– Clasificación –––––––––––––––––––––––––––––––––––
+
+    page.get_by_role("button", name="Clasificación").click()
+
+    # Linea
+    page.locator("label").filter(has_text="Linea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="SAL - Salas", exact=True).click()
+
+    # Modelo
+    page.locator("label").filter(has_text="Modelo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="ANDREA", exact=True).click()
+
+    # Tipo de articulo
+    page.locator("label").filter(has_text="Tipo Articulo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="DE LÍNEA", exact=True).click()
+
+    # Marca
+    page.locator("label").filter(has_text="Marca").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="N/A", exact=True).click()
+
+    # Categoria
+    page.locator("label").filter(has_text="Categoría").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="SOFAS", exact=True).click()
+
+    # Sublinea
+    page.locator("label").filter(has_text="Sublinea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Sofá modular / seccional", exact=True).click()
+
+    # Subcatart
+    page.locator("label").filter(has_text="Subcatart").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Sets de Salas", exact=True).click()
+
+    # Clasificacion precio
+    page.locator("label").filter(has_text="Clasificación de Precio").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="0", exact=True).click()
+
+    # Carpeta de vida
+    page.locator("label").filter(has_text="Carpeta de Vida").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="A", exact=True).click()
+
+    # Subtipo
+    page.locator("label").filter(has_text="SubTipo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Agrupador", exact=True).click()
+
+    # U. compra
+    page.locator("label").filter(has_text="U. Compra").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Conjunto", exact=True).click()
+
+    # Estilo
+    page.locator("label").filter(has_text="Estilo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Contemporáneo", exact=True).click()
+
+    # Familia
+    page.locator("label").filter(has_text="Familia").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="TAPIZ", exact=True).click()
+
+    # TIPO GAIA
+    page.locator("label").filter(has_text="TIPO GAIA").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="grouped", exact=True).click()
+
+    # Visibilidad
+    page.locator("label").filter(has_text="Visibilidad").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Catálogo, Búsqueda", exact=True).click()
+
+    # Categoria Completa
+    page.get_by_role("button", name="--SELECCIONA--").click()
+    page.get_by_role("button", name="muebles", exact=True).click()
+
+    # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
+    
+    page.get_by_role("button", name="Comportamiento de Entrega y").click()
+
+    # Tiempo de entrega a Clientes
+    page.locator("label").filter(has_text="Tiempo de entrega a Clientes").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="7", exact=True).click()
+
+    # Tiempo de producción
+    page.locator("label").filter(has_text=re.compile(r"Tiempo de Producción|Tipo de Producción", re.IGNORECASE)).locator("xpath=following::input").first.fill("30")
+
+    # Tiempo resurtido proveedor
+    page.locator("label").filter(has_text="Tiempo resurtido proveedor").locator("xpath=following::input").first.fill("30")
+
+    # Tiempo Entrega
+    page.locator("label").filter(has_text="Tiempo Entrega").locator("xpath=following::input").first.fill("7")
+
+    # Comportamiento bajo el umbral
+    page.locator("label").filter(has_text="Comportamiento bajo umbral").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="No disponible para carrito", exact=True).click()
+
+    # –– Costeo –––––––––––––––––––––––––––––––––––
+
+    page.get_by_role("button", name="Costeo").click()
+    
+    # Costo compra
+    page.locator("[id=\"Costo Compra\"]").click()
+    page.locator("[id=\"Costo Compra\"]").fill("9800")
+    
+    # Moneda
+    page.locator("label").filter(has_text="Moneda").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="MXN", exact=True).click()
+    
+    # –– Material –––––––––––––––––––––––––––––––––––
+
+    page.get_by_role("button", name="Material").click()
+
+    # Material
+    page.locator("label").filter(has_text="Material").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Textil", exact=True).click()
+
+    # Color
+    page.locator("label").filter(has_text="Color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Marfil", exact=True).click()
+
+    # Familia de color
+    page.locator("label").filter(has_text="Familia de color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="White", exact=True).click()
+
+    # Material Principal
+    page.locator("label").filter(has_text="Material principal").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="Madera", exact=True).click()
+
+    # Tipo de tela
+    page.locator("[id=\"Tipo de tela\"]").click()
+    page.locator("[id=\"Tipo de tela\"]").fill("")
+
+    # Caracteristicas de la tela
+    page.locator("[id=\"Características de tela\"]").click()
+    page.locator("[id=\"Características de tela\"]").fill("")
+
+    # Cojines
+    page.locator("#Cojines").click()
+    page.locator("#Cojines").fill("")
+
+    # Aplicación en madera
+    page.locator("[id=\"Aplicación en madera\"]").click()
+    page.locator("[id=\"Aplicación en madera\"]").fill("")
+
+    # Mecanismos
+    page.locator("[id=\"Mecanismos\"]").click()
+    page.locator("[id=\"Mecanismos\"]").fill("")
+
+    # Cristales
+    page.locator("[id=\"Cristales\"]").click()
+    page.locator("[id=\"Cristales\"]").fill("")
+
+    # –– Ficha técnica –––––––––––––––––––––––––––––––––––
+
+    page.get_by_role("button", name="Ficha técnica").click()
+
+    # Largo
+    page.locator("label").filter(has_text="Largo (cm)").locator("xpath=following::input").first.fill("299")
+
+    # Ancho
+    page.locator("label").filter(has_text="Ancho (cm)").locator("xpath=following::input").first.fill("165")
+
+    # Alto
+    page.locator("label").filter(has_text="Alto (cm)").locator("xpath=following::input").first.fill("96")
+
+    # Peso volumetrico
+    page.locator("label").filter(has_text="Peso volumetrico").locator("xpath=following::input").first.fill("0.00105570")
+
+    # Mantenimiento
+    page.locator("label").filter(has_text="Mantenimiento").locator("xpath=following::input").first.fill("")
+
+    # Tipo de empaque
+    page.locator("label").filter(has_text="Tipo de empaque").locator("xpath=following::input").first.fill("")
+
+    # Número de piezas
+    page.locator("label").filter(has_text="Número de piezas").locator("xpath=following::input").first.fill("")
+
+    # Pieza del producto
+    page.locator("label").filter(has_text="Piezas del producto").locator("xpath=following::input").first.fill("1")
+    
+    # Instructivo URL
+    page.locator("label").filter(has_text="Instructivo URL").locator("xpath=following::input").first.fill("55")
+
+    # Peso máximo soportado (KG)
+    page.locator("label").filter(has_text="Peso (KG)").locator("xpath=following::input").first.fill("30")
+
+    # Peso máximo soportado (KG)
+    page.locator("label").filter(has_text="Peso máximo soportado (KG)").locator("xpath=following::input").first.fill("200")
+
+    # Peso armado (KG)
+    page.locator("label").filter(has_text="Peso armado (KG)").locator("xpath=following::input").first.fill("30")
+
+    # Tipo de armado
+    page.locator("label").filter(has_text="Tipo Armado").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+    page.get_by_role("button", name="No requiere armado", exact=True).click()
+
+    # page.pause()
+
+    # ---------------------
+    context.close()
+    browser.close()
+
+
+with sync_playwright() as playwright:
+    start_time = time.time()
+    run(playwright)
+    print(f"--- Tiempo total de ejecución: {time.time() - start_time:.2f} segundos ---")
