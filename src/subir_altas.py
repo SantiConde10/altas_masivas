@@ -344,7 +344,7 @@ def run(playwright: Playwright) -> None:
         if val_tipo_armado:
             click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
 
-        # page.pause()
+        page.pause()
 
     # ---------------------
     context.close()
