@@ -46,6 +46,7 @@ def run(playwright: Playwright) -> None:
     page.get_by_role("button", name=" Inventarios ▸").click()
 
     for index, row in df.iterrows():
+        print(f"--- Fila {index+1} / {len(df)} | SKU: {row['SKU']} | Proveedor: {row['PROVEEDOR']} ---")
         page.get_by_role("button", name=" Nuevo Articulo").click()
 
         # –– Datos de interacción con ventas –––––––––––––––––––––––––––––––––––
