@@ -47,7 +47,6 @@ def click_dropdown_option(page, label_text, value):
     page.locator(xpath).first.click()
 
 def procesar_fila(page, row) -> None:
-    page.get_by_role("button", name=" Nuevo Articulo").click()
 
     # –– Datos de interacción con ventas –––––––––––––––––––––––––––––––––––
     
@@ -367,7 +366,6 @@ def procesar_fila(page, row) -> None:
     if val_tipo_armado:
         click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
 
-
 def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False) # slow_mo=100
     context = browser.new_context()
@@ -386,14 +384,24 @@ def run(playwright: Playwright) -> None:
     for index, row in df.iterrows():
         print(f"--- Fila {index+1} / {len(df)} | SKU: {row['SKU']} | Proveedor: {row['PROVEEDOR']} ---")
         try:
+            if index == 0:
+                page.get_by_role("button", name=" Nuevo Articulo").click()
+
             procesar_fila(page, row)
+
+            # Click Guardar
+            page.get_by_role("button", name=" Guardar").click()
+
+            # Click + Nuevo if there are more records to process
+            if index < len(df) - 1:
+                page.get_by_role("button", name="+ Nuevo").click()
+                page.wait_for_load_state("networkidle")
+
             print(f"RESULTADO | FILA: {index+1} | ESTADO: OK | SKU: {row['SKU']}")
         except Exception as e:
             print(f"RESULTADO | FILA: {index+1} | ESTADO: ERROR | SKU: {row['SKU']} | MOTIVO: {str(e)}")
             if "Target page, context or browser has been closed" in str(e):
                 break
-    
-    page.pause()
 
     # ---------------------
     context.close()
