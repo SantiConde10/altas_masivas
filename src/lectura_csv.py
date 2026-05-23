@@ -23,9 +23,21 @@ def transformar_df():
         return None
 
     # 2. Transformación de columnas y creación de Grupo
+    def calcular_peso_volumetrico(row):
+        try:
+            largo = float(row['LARGO (CM)'])
+            ancho = float(row['ANCHO (CM)'])
+            alto = float(row['ALTO (CM)'])
+            if largo > 0 and ancho > 0 and alto > 0:
+                return 5000 / (largo * ancho * alto)
+        except (ValueError, TypeError, KeyError, ZeroDivisionError):
+            pass
+        return row.get('PESO VOLUMÉTRICO', '')
+
     try:
         df['Agregar SKU'] = df.apply(lambda row: {row['Agregar SKU']: row['Cantidad']} if str(row['Agregar SKU']).strip() != '' else {}, axis=1)
         df['Grupo'] = df['PROVEEDOR'].replace('', None).ffill()
+        df['PESO VOLUMÉTRICO'] = df.apply(calcular_peso_volumetrico, axis=1)
     except KeyError as e:
         print(f"Error: Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
         return None
