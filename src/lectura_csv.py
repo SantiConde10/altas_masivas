@@ -54,7 +54,7 @@ def transformar_df():
         if 'Columna_Control' in df_final.columns:
             df_final = df_final.drop(columns=['Columna_Control'])
         
-        df_final.replace(None, '', inplace=True)
+        df_final = df_final.astype(object).fillna('')
     except Exception as e:
         print(f"Error en la limpieza final de los datos: {e}")
         return None
