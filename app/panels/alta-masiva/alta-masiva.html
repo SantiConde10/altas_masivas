@@ -1,0 +1,36 @@
+<header class="view-header">
+  <h1>Alta Masiva de Inventario</h1>
+  <p class="subtitle">Automatiza el proceso de lectura de CSV y carga de datos en el sistema interno de GAIA.</p>
+</header>
+
+<div class="content-grid">
+  
+  <div class="controls-card">
+    <h2>Control de Execution</h2>
+    <p>Al iniciar, se abrirá una instancia de navegador gestionada por Playwright que realizará la carga. No cierres la ventana hasta que el proceso finalice.</p>
+    
+    <div class="action-row">
+      <button id="run-btn" class="btn primary-btn">
+        <span id="btn-text">Iniciar Carga Masiva</span>
+      </button>
+      
+      <div id="status-indicator" class="status idle">
+        <span class="status-dot"></span>
+        <span class="status-text">Listo para ejecutar</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="console-card">
+    <div class="console-header">
+      <h3>Registro de Actividad</h3>
+      <button id="clear-btn" class="btn icon-btn" title="Limpiar Consola">
+        Limpiar
+      </button>
+    </div>
+    <div class="console-body" id="console-output">
+      <div class="log-line info">Esperando inicialización...</div>
+    </div>
+  </div>
+  
+</div>

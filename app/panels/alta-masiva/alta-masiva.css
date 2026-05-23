@@ -1,0 +1,140 @@
+.controls-card, .console-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.controls-card h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.controls-card p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Premium Hover en Botón Iniciar Carga Masiva */
+.primary-btn {
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.primary-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px) scale(1.02); /* Animación de hover premium: elevación y escalado ligero */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra difusa */
+}
+
+.primary-btn:active {
+  transform: translateY(0) scale(1);
+}
+
+.primary-btn:disabled {
+  background-color: #ccc;
+  color: #888;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.icon-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+.icon-btn:hover {
+  background-color: var(--bg-sidebar);
+  color: var(--text-primary);
+}
+
+/* Status Indicator */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--status-idle);
+}
+
+.status.running .status-dot {
+  background-color: var(--status-running);
+  animation: pulse 1.5s infinite;
+}
+.status.running .status-text { color: var(--status-running); }
+
+.status.success .status-dot { background-color: var(--status-success); }
+.status.success .status-text { color: var(--status-success); }
+
+.status.error .status-dot { background-color: var(--status-error); }
+.status.error .status-text { color: var(--status-error); }
+
+/* Console */
+.console-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #fafafa;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.console-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.console-body {
+  flex: 1;
+  background-color: var(--console-bg);
+  padding: 1.5rem;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--console-text);
+}
+
+.log-line {
+  margin-bottom: 0.3rem;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.log-line.error { color: #fca5a5; }
+.log-line.info { color: #93c5fd; }
+.log-line.success { color: #86efac; }
+
+.console-body::-webkit-scrollbar-thumb { background: #475569; }
+.console-body::-webkit-scrollbar-thumb:hover { background: #64748b; }

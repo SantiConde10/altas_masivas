@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="panels/home/home.css">
+  <link rel="stylesheet" href="panels/alta-masiva/alta-masiva.css">
 </head>
 <body>
   
@@ -60,99 +62,12 @@
       
       <!-- Vista de Inicio (Home) -->
       <section id="home-view" class="view-section active">
-        <header class="view-header">
-          <h1>Portal de Automatización</h1>
-          <p class="subtitle">Bienvenido al asistente interno de operaciones de inventario de GAIA Design.</p>
-        </header>
-
-        <div class="content-grid">
-          <div class="home-intro-card">
-            <h2>¿Cómo empezar?</h2>
-            <p>Este portal te permite ejecutar tareas repetitivas de forma automatizada mediante procesos controlados en segundo plano.</p>
-            
-            <div class="steps-container">
-              <div class="step-item">
-                <span class="step-number">1</span>
-                <div class="step-desc">
-                  <h3>Preparar los datos</h3>
-                  <p>Asegúrate de colocar tu archivo CSV con los artículos en la carpeta <code>data/</code> de la raíz del proyecto.</p>
-                </div>
-              </div>
-              <div class="step-item">
-                <span class="step-number">2</span>
-                <div class="step-desc">
-                  <h3>Seleccionar función</h3>
-                  <p>Usa la barra lateral izquierda para elegir la acción que deseas realizar (por ejemplo, <strong>Alta Masiva</strong>).</p>
-                </div>
-              </div>
-              <div class="step-item">
-                <span class="step-number">3</span>
-                <div class="step-desc">
-                  <h3>Ejecutar y Monitorear</h3>
-                  <p>Haz clic en iniciar y observa el registro detallado en la consola en tiempo real.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="status-overview-card">
-            <h2>Resumen del Entorno</h2>
-            <div class="overview-grid">
-              <div class="overview-item">
-                <span class="item-label">Estado de la App</span>
-                <span class="item-value status-active">Operativo</span>
-              </div>
-              <div class="overview-item">
-                <span class="item-label">Ruta de Carga CSV</span>
-                <span class="item-value font-mono">/data/*.csv</span>
-              </div>
-              <div class="overview-item">
-                <span class="item-label">Script Asociado</span>
-                <span class="item-value font-mono">subir_altas.py</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Cargado dinámicamente -->
       </section>
       
       <!-- Vista de Alta Masiva -->
       <section id="alta-masiva-view" class="view-section">
-        <header class="view-header">
-          <h1>Alta Masiva de Inventario</h1>
-          <p class="subtitle">Automatiza el proceso de lectura de CSV y carga de datos en el sistema interno de GAIA.</p>
-        </header>
-        
-        <div class="content-grid">
-          
-          <div class="controls-card">
-            <h2>Control de Execution</h2>
-            <p>Al iniciar, se abrirá una instancia de navegador gestionada por Playwright que realizará la carga. No cierres la ventana hasta que el proceso finalice.</p>
-            
-            <div class="action-row">
-              <button id="run-btn" class="btn primary-btn">
-                <span id="btn-text">Iniciar Carga Masiva</span>
-              </button>
-              
-              <div id="status-indicator" class="status idle">
-                <span class="status-dot"></span>
-                <span class="status-text">Listo para ejecutar</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="console-card">
-            <div class="console-header">
-              <h3>Registro de Actividad</h3>
-              <button id="clear-btn" class="btn icon-btn" title="Limpiar Consola">
-                Limpiar
-              </button>
-            </div>
-            <div class="console-body" id="console-output">
-              <div class="log-line info">Esperando inicialización...</div>
-            </div>
-          </div>
-          
-        </div>
+        <!-- Cargado dinámicamente -->
       </section>
 
     </main>

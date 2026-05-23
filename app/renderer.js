@@ -1,4 +1,23 @@
-document.addEventListener('DOMContentLoaded', () => {
+async function loadPanel(id, htmlPath) {
+  const container = document.getElementById(id);
+  const response = await fetch(htmlPath);
+  if (!response.ok) {
+    throw new Error(`Error loading panel ${htmlPath}: ${response.statusText}`);
+  }
+  container.innerHTML = await response.text();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Cargar paneles dinámicamente
+  try {
+    await Promise.all([
+      loadPanel('home-view', 'panels/home/home.html'),
+      loadPanel('alta-masiva-view', 'panels/alta-masiva/alta-masiva.html')
+    ]);
+  } catch (error) {
+    console.error('Error cargando paneles:', error);
+  }
+
   // Splash Screen Transition
   const splashScreen = document.getElementById('splash-screen');
   const appLayout = document.getElementById('app-layout');
