@@ -32,6 +32,14 @@ def clean_val(val):
             pass
     return val_str
 
+def clean_num(val, default=""):
+    if pd.isna(val):
+        return default
+    val_str = str(val).replace(',', '').strip()
+    if not val_str:
+        return default
+    return val_str
+
 def click_dropdown_option(page, label_text, value):
     page.locator("label").filter(has_text=label_text).locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
     val_lower = value.lower()
@@ -255,7 +263,7 @@ def procesar_fila(page, row) -> None:
     
     # Costo compra
     page.locator("[id=\"Costo Compra\"]").click()
-    page.locator("[id=\"Costo Compra\"]").fill(str(row['COSTO DE COMPRA']))
+    page.locator("[id=\"Costo Compra\"]").fill(clean_num(row['COSTO DE COMPRA']))
     
     # Moneda
     val_moneda = clean_val(row['MONEDA'])
@@ -264,7 +272,7 @@ def procesar_fila(page, row) -> None:
 
     # Tipo Cambio
     val_tipo_cambio = row.get('TIPO DE CAMBIO') or row.get('TIPO CAMBIO') or row.get('Tipo de Cambio') or row.get('Tipo Cambio', '1')
-    page.locator("[id=\"Tipo Cambio\"]").fill(str(val_tipo_cambio))
+    page.locator("[id=\"Tipo Cambio\"]").fill(clean_num(val_tipo_cambio, "1"))
     
     # –– Material –––––––––––––––––––––––––––––––––––
 
@@ -319,16 +327,16 @@ def procesar_fila(page, row) -> None:
     page.get_by_role("button", name="Ficha técnica").click()
 
     # Largo
-    page.locator("label").filter(has_text="Largo (cm)").locator("xpath=following::input").first.fill(str(row['LARGO (CM)']))
+    page.locator("label").filter(has_text="Largo (cm)").locator("xpath=following::input").first.fill(clean_num(row['LARGO (CM)']))
 
     # Ancho
-    page.locator("label").filter(has_text="Ancho (cm)").locator("xpath=following::input").first.fill(str(row['ANCHO (CM)']))
+    page.locator("label").filter(has_text="Ancho (cm)").locator("xpath=following::input").first.fill(clean_num(row['ANCHO (CM)']))
 
     # Alto
-    page.locator("label").filter(has_text="Alto (cm)").locator("xpath=following::input").first.fill(str(row['ALTO (CM)']))
+    page.locator("label").filter(has_text="Alto (cm)").locator("xpath=following::input").first.fill(clean_num(row['ALTO (CM)']))
 
     # Peso volumetrico
-    page.locator("label").filter(has_text="Peso volumetrico").locator("xpath=following::input").first.fill(str(row['PESO VOLUMÉTRICO']))
+    page.locator("label").filter(has_text="Peso volumetrico").locator("xpath=following::input").first.fill(clean_num(row['PESO VOLUMÉTRICO']))
 
     # Mantenimiento
     page.locator("label").filter(has_text="Mantenimiento").locator("xpath=following::input").first.fill(str(row['MANTENIMIENTO']) if pd.notna(row['MANTENIMIENTO']) else "")
@@ -340,19 +348,19 @@ def procesar_fila(page, row) -> None:
     page.locator("label").filter(has_text="Número de piezas").locator("xpath=following::input").first.fill(str(row['NÚMERO DE PIEZAS']) if pd.notna(row['NÚMERO DE PIEZAS']) else "")
 
     # Pieza del producto
-    page.locator("label").filter(has_text="Piezas del producto").locator("xpath=following::input").first.fill(str(row['PIEZAS DEL PRODUCTO']))
+    page.locator("label").filter(has_text="Piezas del producto").locator("xpath=following::input").first.fill(clean_num(row['PIEZAS DEL PRODUCTO']))
     
     # Instructivo URL
     page.locator("label").filter(has_text="Instructivo URL").locator("xpath=following::input").first.fill(str(row['INSTRUCTIVO URL']) if pd.notna(row['INSTRUCTIVO URL']) else "")
 
     # Peso (KG)
-    page.locator("label").filter(has_text="Peso (KG)").locator("xpath=following::input").first.fill(str(row['PESO (KG)']))
+    page.locator("label").filter(has_text="Peso (KG)").locator("xpath=following::input").first.fill(clean_num(row['PESO (KG)']))
 
     # Peso máximo soportado (KG)
-    page.locator("label").filter(has_text="Peso máximo soportado (KG)").locator("xpath=following::input").first.fill(str(row['PESO MÁXIMO SOPORTADO (KG)']))
+    page.locator("label").filter(has_text="Peso máximo soportado (KG)").locator("xpath=following::input").first.fill(clean_num(row['PESO MÁXIMO SOPORTADO (KG)']))
 
     # Peso armado (KG)
-    page.locator("label").filter(has_text="Peso armado (KG)").locator("xpath=following::input").first.fill(str(row['PESO ARMADO (KG)']))
+    page.locator("label").filter(has_text="Peso armado (KG)").locator("xpath=following::input").first.fill(clean_num(row['PESO ARMADO (KG)']))
 
     # Tipo de armado
     val_tipo_armado = clean_val(row['TIPO ARMADO'])
