@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'">
+  <title>GAIA - Carga Masiva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/LogotipoGAIA_black.png" alt="GAIA Logo" class="brand-logo">
+      </div>
+      
+      <nav class="sidebar-nav">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <button class="nav-btn active" data-target="alta-masiva-view">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <span>Alta Masiva</span>
+            </button>
+          </li>
+          <!-- Más opciones pueden agregarse aquí en el futuro -->
+        </ul>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <p class="version">v1.0.0</p>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-area">
+      
+      <!-- Vista de Alta Masiva -->
+      <section id="alta-masiva-view" class="view-section active">
+        <header class="view-header">
+          <h1>Alta Masiva de Inventario</h1>
+          <p class="subtitle">Automatiza el proceso de lectura de CSV y carga de datos en el sistema interno de GAIA.</p>
+        </header>
+        
+        <div class="content-grid">
+          
+          <div class="controls-card">
+            <h2>Control de Ejecución</h2>
+            <p>Al iniciar, se abrirá una instancia de navegador gestionada por Playwright que realizará la carga. No cierres la ventana hasta que el proceso finalice.</p>
+            
+            <div class="action-row">
+              <button id="run-btn" class="btn primary-btn">
+                <span id="btn-text">Iniciar Carga Masiva</span>
+              </button>
+              
+              <div id="status-indicator" class="status idle">
+                <span class="status-dot"></span>
+                <span class="status-text">Listo para ejecutar</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="console-card">
+            <div class="console-header">
+              <h3>Registro de Actividad</h3>
+              <button id="clear-btn" class="btn icon-btn" title="Limpiar Consola">
+                Limpiar
+              </button>
+            </div>
+            <div class="console-body" id="console-output">
+              <div class="log-line info">Esperando inicialización...</div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+document.addEventListener('DOMContentLoaded', () => {
+  // Navigation Logic
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const viewSections = document.querySelectorAll('.view-section');
+
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active from all
+      navBtns.forEach(b => b.classList.remove('active'));
+      viewSections.forEach(v => v.classList.remove('active'));
+
+      // Add active to clicked
+      btn.classList.add('active');
+      const targetId = btn.getAttribute('data-target');
+      document.getElementById(targetId).classList.add('active');
+    });
+  });
+
+  // Alta Masiva Logic
+  const runBtn = document.getElementById('run-btn');
+  const btnText = document.getElementById('btn-text');
+  const statusIndicator = document.getElementById('status-indicator');
+  const statusText = statusIndicator.querySelector('.status-text');
+  const consoleOutput = document.getElementById('console-output');
+  const clearBtn = document.getElementById('clear-btn');
+
+  let isRunning = false;
+
+  function appendLog(message, type = 'normal') {
+    const logLine = document.createElement('div');
+    logLine.className = `log-line ${type}`;
+    logLine.textContent = message;
+    consoleOutput.appendChild(logLine);
+    
+    // Auto scroll to bottom
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+  }
+
+  function setStatus(status, text) {
+    statusIndicator.className = `status ${status}`;
+    statusText.textContent = text;
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      consoleOutput.innerHTML = '';
+    });
+  }
+
+  if (runBtn) {
+    runBtn.addEventListener('click', () => {
+      if (isRunning) return;
+
+      isRunning = true;
+      runBtn.disabled = true;
+      btnText.textContent = 'Ejecutando...';
+      setStatus('running', 'Procesando altas...');
+      
+      appendLog('--- Iniciando carga masiva ---', 'info');
+      
+      // Call main process to run python
+      window.electronAPI.runPythonScript();
+    });
+  }
+
+  // Listen for logs from Python
+  window.electronAPI.onPythonLog((data) => {
+    appendLog(data.trim());
+  });
+
+  window.electronAPI.onPythonError((data) => {
+    appendLog(data.trim(), 'error');
+  });
+
+  window.electronAPI.onPythonFinished((code) => {
+    isRunning = false;
+    runBtn.disabled = false;
+    if (btnText) btnText.textContent = 'Iniciar Carga Masiva';
+    
+    if (code === 0) {
+      setStatus('success', 'Proceso completado con éxito');
+      appendLog(`--- Proceso finalizado (Código ${code}) ---`, 'success');
+    } else {
+      setStatus('error', `Error en el proceso (Código ${code})`);
+      appendLog(`--- Proceso fallido con código ${code} ---`, 'error');
+    }
+  });
+});

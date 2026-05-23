@@ -1,0 +1,14 @@
+{
+  "name": "gaia-alta-masiva",
+  "version": "1.0.0",
+  "description": "Aplicación de escritorio para la carga masiva de artículos en GAIA",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox"
+  },
+  "author": "Santi Conde",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
