@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'">
-  <title>GAIA - Carga Masiva</title>
+  <title>GAIA - Automatización</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -36,7 +36,13 @@
       <nav class="sidebar-nav">
         <ul class="nav-list">
           <li class="nav-item">
-            <button class="nav-btn active" data-target="alta-masiva-view">
+            <button class="nav-btn active" data-target="home-view">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              <span>Inicio</span>
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-btn" data-target="alta-masiva-view">
               <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               <span>Alta Masiva</span>
             </button>
@@ -52,8 +58,65 @@
     <!-- Main Content -->
     <main class="main-area">
       
+      <!-- Vista de Inicio (Home) -->
+      <section id="home-view" class="view-section active">
+        <header class="view-header">
+          <h1>Portal de Automatización</h1>
+          <p class="subtitle">Bienvenido al asistente interno de operaciones de inventario de GAIA Design.</p>
+        </header>
+
+        <div class="content-grid">
+          <div class="home-intro-card">
+            <h2>¿Cómo empezar?</h2>
+            <p>Este portal te permite ejecutar tareas repetitivas de forma automatizada mediante procesos controlados en segundo plano.</p>
+            
+            <div class="steps-container">
+              <div class="step-item">
+                <span class="step-number">1</span>
+                <div class="step-desc">
+                  <h3>Preparar los datos</h3>
+                  <p>Asegúrate de colocar tu archivo CSV con los artículos en la carpeta <code>data/</code> de la raíz del proyecto.</p>
+                </div>
+              </div>
+              <div class="step-item">
+                <span class="step-number">2</span>
+                <div class="step-desc">
+                  <h3>Seleccionar función</h3>
+                  <p>Usa la barra lateral izquierda para elegir la acción que deseas realizar (por ejemplo, <strong>Alta Masiva</strong>).</p>
+                </div>
+              </div>
+              <div class="step-item">
+                <span class="step-number">3</span>
+                <div class="step-desc">
+                  <h3>Ejecutar y Monitorear</h3>
+                  <p>Haz clic en iniciar y observa el registro detallado en la consola en tiempo real.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-overview-card">
+            <h2>Resumen del Entorno</h2>
+            <div class="overview-grid">
+              <div class="overview-item">
+                <span class="item-label">Estado de la App</span>
+                <span class="item-value status-active">Operativo</span>
+              </div>
+              <div class="overview-item">
+                <span class="item-label">Ruta de Carga CSV</span>
+                <span class="item-value font-mono">/data/*.csv</span>
+              </div>
+              <div class="overview-item">
+                <span class="item-label">Script Asociado</span>
+                <span class="item-value font-mono">subir_altas.py</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <!-- Vista de Alta Masiva -->
-      <section id="alta-masiva-view" class="view-section active">
+      <section id="alta-masiva-view" class="view-section">
         <header class="view-header">
           <h1>Alta Masiva de Inventario</h1>
           <p class="subtitle">Automatiza el proceso de lectura de CSV y carga de datos en el sistema interno de GAIA.</p>
@@ -62,7 +125,7 @@
         <div class="content-grid">
           
           <div class="controls-card">
-            <h2>Control de Ejecución</h2>
+            <h2>Control de Execution</h2>
             <p>Al iniciar, se abrirá una instancia de navegador gestionada por Playwright que realizará la carga. No cierres la ventana hasta que el proceso finalice.</p>
             
             <div class="action-row">
