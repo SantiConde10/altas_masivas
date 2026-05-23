@@ -18,7 +18,6 @@ alta_masiva/
 │   └── lectura_csv.py    # Procesamiento y transformación de datos con Pandas
 ├── data/                 # Directorio para archivos de entrada
 │   └── *.csv             # Archivos CSV con los datos a procesar (Ej. ALTAS-SED WEB.csv)
-├── assets/               # Recursos visuales generales del proyecto
 ├── secrets/              # Credenciales y variables de entorno seguras
 ├── pyproject.toml        # Dependencias de Python gestionadas por `uv`
 └── README.md             # Documentación principal
