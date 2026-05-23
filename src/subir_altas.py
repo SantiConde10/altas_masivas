@@ -104,11 +104,34 @@ def procesar_fila(page, row) -> None:
         page.locator("[id=\"Agregar SKU\"]").click()
         page.locator("[id=\"Agregar SKU\"]").fill(str(sku_key))
         page.get_by_role("button").filter(has_text="").click()
-        if grid_idx == 0:
-            page.get_by_role("gridcell", name="1", exact=True).click()
-        else:
-            page.get_by_role("gridcell", name="1").nth(grid_idx * 2).click()
-        page.get_by_role("spinbutton", name="Columna Cantidad").fill(str(sku_cantidad))
+        
+        # Click grid cell to edit quantity
+        cell_clicked = False
+        try:
+            # Click the Cantidad cell directly by index:
+            # First row quantity is index 1, second row is 3, etc.
+            page.get_by_role("gridcell").nth((grid_idx * 2) + 1).click(timeout=3000)
+            cell_clicked = True
+        except Exception:
+            pass
+
+        if not cell_clicked:
+            try:
+                if grid_idx == 0:
+                    page.get_by_role("gridcell", name="1", exact=True).click(timeout=3000)
+                else:
+                    page.get_by_role("gridcell", name="1").nth(grid_idx * 2).click(timeout=3000)
+            except Exception as cell_err:
+                print(f"Advertencia: No se pudo hacer click en la celda de la fila {grid_idx+1}: {cell_err}")
+
+        # Fill quantity using a robust spinbutton locator
+        try:
+            # Try by role spinbutton first
+            page.get_by_role("spinbutton").first.fill(str(sku_cantidad), timeout=5000)
+        except Exception:
+            # Fallback to the specific named spinbutton
+            page.get_by_role("spinbutton", name=re.compile("Cantidad", re.IGNORECASE)).first.fill(str(sku_cantidad))
+            
         grid_idx += 1
 
     # –– Clasificación –––––––––––––––––––––––––––––––––––
