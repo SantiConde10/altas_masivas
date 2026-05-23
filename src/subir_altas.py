@@ -17,6 +17,19 @@ url_gaia = os.getenv("URL")
 
 df = transformar_df()
 
+def clean_val(val):
+    if pd.isna(val):
+        return ""
+    val_str = str(val).strip()
+    if not val_str:
+        return ""
+    if val_str.endswith(".0"):
+        try:
+            return str(int(float(val_str)))
+        except:
+            pass
+    return val_str
+
 def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False) # slow_mo=100
     context = browser.new_context()
@@ -38,8 +51,10 @@ def run(playwright: Playwright) -> None:
         # –– Datos de interacción con ventas –––––––––––––––––––––––––––––––––––
         
         # Proveedor 
-        page.locator("label").filter(has_text="Proveedor").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['PROVEEDOR'])).click()
+        val_proveedor = clean_val(row['PROVEEDOR'])
+        if val_proveedor:
+            page.locator("label").filter(has_text="Proveedor").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_proveedor).click()
 
         # SKU 
         page.locator("#SKU").click()
@@ -62,8 +77,10 @@ def run(playwright: Playwright) -> None:
         page.get_by_text("Seleccionar todos").click()
 
         # U. Venta
-        page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.locator("button.list-group-item", has_text=str(row['U.VENTA'])).click()
+        val_u_venta = clean_val(row['U.VENTA'])
+        if val_u_venta:
+            page.locator("label").filter(has_text="U. Venta").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.locator("button.list-group-item", has_text=val_u_venta).click()
 
         fecha_1 = pd.to_datetime(row['Fecha 1'], dayfirst=True).strftime('%Y-%m-%d') if pd.notna(row['Fecha 1']) else ""
         fecha_2 = pd.to_datetime(row['Fecha 2'], dayfirst=True).strftime('%Y-%m-%d') if pd.notna(row['Fecha 2']) else ""
@@ -91,89 +108,131 @@ def run(playwright: Playwright) -> None:
         page.get_by_role("button", name="Clasificación").click()
 
         # Linea
-        page.locator("label").filter(has_text="Linea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['LINEA']), exact=True).click()
+        val_linea = clean_val(row['LINEA'])
+        if val_linea:
+            page.locator("label").filter(has_text="Linea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_linea, exact=True).click()
 
         # Modelo
-        page.locator("label").filter(has_text="Modelo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['MODELO']), exact=True).click()
+        val_modelo = clean_val(row['MODELO'])
+        if val_modelo:
+            page.locator("label").filter(has_text="Modelo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_modelo, exact=True).click()
 
         # Tipo de articulo
-        page.locator("label").filter(has_text="Tipo Articulo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['TIPO ARTICULO']), exact=True).click()
+        val_tipo_articulo = clean_val(row['TIPO ARTICULO'])
+        if val_tipo_articulo:
+            page.locator("label").filter(has_text="Tipo Articulo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_tipo_articulo, exact=True).click()
 
         # Marca
-        page.locator("label").filter(has_text="Marca").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['MARCA']), exact=True).click()
+        val_marca = clean_val(row['MARCA'])
+        if val_marca:
+            page.locator("label").filter(has_text="Marca").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_marca, exact=True).click()
 
         # Categoria
-        page.locator("label").filter(has_text="Categoría").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['CATEGORIA']), exact=True).click()
+        val_categoria = clean_val(row['CATEGORIA'])
+        if val_categoria:
+            page.locator("label").filter(has_text="Categoría").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_categoria, exact=True).click()
 
         # Sublinea
-        page.locator("label").filter(has_text="Sublinea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['SUBLINEA']), exact=True).click()
+        val_sublinea = clean_val(row['SUBLINEA'])
+        if val_sublinea:
+            page.locator("label").filter(has_text="Sublinea").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_sublinea, exact=True).click()
 
         # Subcatart
-        page.locator("label").filter(has_text="Subcatart").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['SUBCATART']), exact=True).click()
+        val_subcatart = clean_val(row['SUBCATART'])
+        if val_subcatart:
+            page.locator("label").filter(has_text="Subcatart").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_subcatart, exact=True).click()
 
         # Clasificacion precio
-        page.locator("label").filter(has_text="Clasificación de Precio").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['CLASIFICACION PRECIO']), exact=True).click()
+        val_clasificacion_precio = clean_val(row['CLASIFICACION PRECIO'])
+        if val_clasificacion_precio:
+            page.locator("label").filter(has_text="Clasificación de Precio").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_clasificacion_precio, exact=True).click()
 
         # Carpeta de vida
-        page.locator("label").filter(has_text="Carpeta de Vida").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['CARPETA DE VIDA']), exact=True).click()
+        val_carpeta_vida = clean_val(row['CARPETA DE VIDA'])
+        if val_carpeta_vida:
+            page.locator("label").filter(has_text="Carpeta de Vida").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_carpeta_vida, exact=True).click()
 
         # Subtipo
-        page.locator("label").filter(has_text="SubTipo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['SUBTIPO']), exact=True).click()
+        val_subtipo = clean_val(row['SUBTIPO'])
+        if val_subtipo:
+            page.locator("label").filter(has_text="SubTipo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_subtipo, exact=True).click()
 
         # U. compra
-        page.locator("label").filter(has_text="U. Compra").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['U.COMPRA']), exact=True).click()
+        val_u_compra = clean_val(row['U.COMPRA'])
+        if val_u_compra:
+            page.locator("label").filter(has_text="U. Compra").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_u_compra, exact=True).click()
 
         # Estilo
-        page.locator("label").filter(has_text="Estilo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['ESTILO']), exact=True).click()
+        val_estilo = clean_val(row['ESTILO'])
+        if val_estilo:
+            page.locator("label").filter(has_text="Estilo").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_estilo, exact=True).click()
 
         # Familia
-        page.locator("label").filter(has_text="Familia").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['FAMILIA']), exact=True).click()
+        val_familia = clean_val(row['FAMILIA'])
+        if val_familia:
+            page.locator("label").filter(has_text="Familia").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_familia, exact=True).click()
 
         # TIPO GAIA
-        page.locator("label").filter(has_text="TIPO GAIA").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['TIPO GAIA']), exact=True).click()
+        val_tipo_gaia = clean_val(row['TIPO GAIA'])
+        if val_tipo_gaia:
+            page.locator("label").filter(has_text="TIPO GAIA").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_tipo_gaia, exact=True).click()
 
         # Visibilidad
-        page.locator("label").filter(has_text="Visibilidad").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['VISIBILIDAD']), exact=True).click()
+        val_visibilidad = clean_val(row['VISIBILIDAD'])
+        if val_visibilidad:
+            page.locator("label").filter(has_text="Visibilidad").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_visibilidad, exact=True).click()
 
         # Categoria Completa
-        page.get_by_role("button", name="--SELECCIONA--").click()
-        page.get_by_role("button", name=str(row['CATEGORÍA COMPLETA']), exact=True).click()
+        val_categoria_completa = clean_val(row['CATEGORÍA COMPLETA'])
+        if val_categoria_completa:
+            page.get_by_role("button", name="--SELECCIONA--").click()
+            page.get_by_role("button", name=val_categoria_completa, exact=True).click()
 
         # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
         
         page.get_by_role("button", name="Comportamiento de Entrega y").click()
 
         # Tiempo de entrega a Clientes
-        page.locator("label").filter(has_text="Tiempo de entrega a Clientes").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(int(row['TIEMPO DE ENTREGA A CLIENTES'])) if pd.notna(row['TIEMPO DE ENTREGA A CLIENTES']) else "", exact=True).click()
+        val_tiempo_entrega_clientes = clean_val(row['TIEMPO DE ENTREGA A CLIENTES'])
+        if val_tiempo_entrega_clientes:
+            page.locator("label").filter(has_text="Tiempo de entrega a Clientes").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_tiempo_entrega_clientes, exact=True).click()
 
         # Tiempo de producción
-        page.locator("label").filter(has_text=re.compile(r"Tiempo de Producción|Tipo de Producción", re.IGNORECASE)).locator("xpath=following::input").first.fill(str(int(row['TIEMPO DE PRODUCCION'])) if pd.notna(row['TIEMPO DE PRODUCCION']) else "")
+        val_tiempo_produccion = clean_val(row['TIEMPO DE PRODUCCION'])
+        if val_tiempo_produccion:
+            page.locator("label").filter(has_text=re.compile(r"Tiempo de Producción|Tipo de Producción", re.IGNORECASE)).locator("xpath=following::input").first.fill(val_tiempo_produccion)
 
         # Tiempo resurtido proveedor
-        page.locator("label").filter(has_text="Tiempo resurtido proveedor").locator("xpath=following::input").first.fill(str(int(row['TIEMPO RESURTIDO PROVEEDOR'])) if pd.notna(row['TIEMPO RESURTIDO PROVEEDOR']) else "")
+        val_tiempo_resurtido_proveedor = clean_val(row['TIEMPO RESURTIDO PROVEEDOR'])
+        if val_tiempo_resurtido_proveedor:
+            page.locator("label").filter(has_text="Tiempo resurtido proveedor").locator("xpath=following::input").first.fill(val_tiempo_resurtido_proveedor)
 
         # Tiempo Entrega
-        page.locator("label").filter(has_text="Tiempo Entrega").locator("xpath=following::input").first.fill(str(int(row['TIEMPO ENTREGA'])) if pd.notna(row['TIEMPO ENTREGA']) else "")
+        val_tiempo_entrega = clean_val(row['TIEMPO ENTREGA'])
+        if val_tiempo_entrega:
+            page.locator("label").filter(has_text="Tiempo Entrega").locator("xpath=following::input").first.fill(val_tiempo_entrega)
 
         # Comportamiento bajo el umbral
-        page.locator("label").filter(has_text="Comportamiento bajo umbral").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['COMPORTAMIENTO BAJO EL UMBRAL']), exact=True).click()
+        val_comportamiento_umbral = clean_val(row['COMPORTAMIENTO BAJO EL UMBRAL'])
+        if val_comportamiento_umbral:
+            page.locator("label").filter(has_text="Comportamiento bajo umbral").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_comportamiento_umbral, exact=True).click()
 
         # –– Costeo –––––––––––––––––––––––––––––––––––
 
@@ -184,28 +243,38 @@ def run(playwright: Playwright) -> None:
         page.locator("[id=\"Costo Compra\"]").fill(str(row['COSTO DE COMPRA']))
         
         # Moneda
-        page.locator("label").filter(has_text="Moneda").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['MONEDA']), exact=True).click()
+        val_moneda = clean_val(row['MONEDA'])
+        if val_moneda:
+            page.locator("label").filter(has_text="Moneda").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_moneda, exact=True).click()
         
         # –– Material –––––––––––––––––––––––––––––––––––
 
         page.get_by_role("button", name="Material").click()
 
         # Material
-        page.locator("label").filter(has_text="Material").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['MATERIAL']), exact=True).click()
+        val_material = clean_val(row['MATERIAL'])
+        if val_material:
+            page.locator("label").filter(has_text="Material").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_material, exact=True).click()
 
         # Color
-        page.locator("label").filter(has_text="Color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['COLOR']), exact=True).click()
+        val_color = clean_val(row['COLOR'])
+        if val_color:
+            page.locator("label").filter(has_text="Color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_color, exact=True).click()
 
         # Familia de color
-        page.locator("label").filter(has_text="Familia de color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['FAMILIA DE COLOR']), exact=True).click()
+        val_familia_color = clean_val(row['FAMILIA DE COLOR'])
+        if val_familia_color:
+            page.locator("label").filter(has_text="Familia de color").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_familia_color, exact=True).click()
 
         # Material Principal
-        page.locator("label").filter(has_text="Material principal").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['MATERIAL PRINCIPAL']), exact=True).click()
+        val_material_principal = clean_val(row['MATERIAL PRINCIPAL'])
+        if val_material_principal:
+            page.locator("label").filter(has_text="Material principal").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_material_principal, exact=True).click()
 
         # Tipo de tela
         page.locator("[id=\"Tipo de tela\"]").click()
@@ -270,8 +339,10 @@ def run(playwright: Playwright) -> None:
         page.locator("label").filter(has_text="Peso armado (KG)").locator("xpath=following::input").first.fill(str(row['PESO ARMADO (KG)']))
 
         # Tipo de armado
-        page.locator("label").filter(has_text="Tipo Armado").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
-        page.get_by_role("button", name=str(row['TIPO ARMADO']), exact=True).click()
+        val_tipo_armado = clean_val(row['TIPO ARMADO'])
+        if val_tipo_armado:
+            page.locator("label").filter(has_text="Tipo Armado").locator("xpath=following::button[contains(@class, 'form-control')]").first.click()
+            page.get_by_role("button", name=val_tipo_armado, exact=True).click()
 
         # page.pause()
 

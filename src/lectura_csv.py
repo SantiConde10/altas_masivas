@@ -17,7 +17,7 @@ def transformar_df():
         # Usamos el primer CSV encontrado
         archivo_path = csv_files[0]
         print(f"Leyendo archivo de datos: {archivo_path.name}")
-        df = pd.read_csv(archivo_path, skiprows=2)
+        df = pd.read_csv(archivo_path, skiprows=2, keep_default_na=False)
     except Exception as e:
         print(f"Error inesperado al leer el archivo CSV: {e}")
         return None
