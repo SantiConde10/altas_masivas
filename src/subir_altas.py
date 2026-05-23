@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 from lectura_csv import transformar_df
 import pandas as pd
 
-load_dotenv("../secrets/.env")
+# Cargar variables de entorno usando la ruta absoluta de secrets/.env
+base_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(base_dir, "..", "secrets", ".env")
+load_dotenv(dotenv_path)
 
 usuario = os.getenv("USUARIO")
 password = os.getenv("PASSWORD")
