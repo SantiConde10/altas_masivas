@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let totalRows = 0;
   let successRows = 0;
   let errorRows = 0;
+  let failedSKUs = [];
 
   function setStatus(status, text) {
     if (statusIndicator) {
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       totalRows = 0;
       successRows = 0;
       errorRows = 0;
+      failedSKUs = [];
       
       const successCountEl = document.getElementById('success-count');
       const errorCountEl = document.getElementById('error-count');
@@ -259,12 +261,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (errorCountEl) errorCountEl.textContent = errorRows;
         
         const matchReason = trimmed.match(/MOTIVO:\s*(.*)/);
-        const reasonStr = matchReason ? `: ${matchReason[1]}` : '';
+        const reasonStr = matchReason ? matchReason[1] : 'Error desconocido';
         const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
-        const skuStr = matchSku ? ` SKU ${matchSku[1]}` : ' Fila';
+        const skuStr = matchSku ? matchSku[1] : 'Fila';
+
+        failedSKUs.push({ sku: skuStr, reason: reasonStr });
 
         if (progressSubtextEl) {
-          progressSubtextEl.textContent = `Error en${skuStr}${reasonStr}`;
+          progressSubtextEl.textContent = `Error en SKU ${skuStr}: ${reasonStr}`;
         }
         updateProgress();
       }
@@ -290,11 +294,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const progressSubtextEl = document.getElementById('progress-subtext');
 
     if (code === 0) {
-      setStatus('success', 'Proceso completado con éxito');
-      if (progressSubtextEl) progressSubtextEl.textContent = 'Carga finalizada correctamente.';
+      if (failedSKUs.length > 0) {
+        setStatus('error', `Finalizado con ${failedSKUs.length} error(es)`);
+        const summary = failedSKUs.map(e => `SKU ${e.sku}: ${e.reason}`).join(' | ');
+        if (progressSubtextEl) {
+          progressSubtextEl.textContent = `Errores detectados: ${summary}`;
+        }
+      } else {
+        setStatus('success', 'Proceso completado con éxito');
+        if (progressSubtextEl) progressSubtextEl.textContent = 'Carga finalizada correctamente.';
+      }
     } else {
       setStatus('error', `Error en el proceso (Código ${code})`);
-      if (progressSubtextEl) progressSubtextEl.textContent = `El proceso terminó con error (Código ${code}).`;
+      if (progressSubtextEl) {
+        if (failedSKUs.length > 0) {
+          const summary = failedSKUs.map(e => `SKU ${e.sku}: ${e.reason}`).join(' | ');
+          progressSubtextEl.textContent = `El proceso terminó con error (Código ${code}). Errores: ${summary}`;
+        } else {
+          progressSubtextEl.textContent = `El proceso terminó con error (Código ${code}).`;
+        }
+      }
     }
   });
 });

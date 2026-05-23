@@ -389,8 +389,50 @@ def run(playwright: Playwright) -> None:
 
             procesar_fila(page, row)
 
+            # Check for HTML5 native validation errors
+            invalid_field_msg = page.evaluate("""() => {
+                const invalidEl = document.querySelector(':invalid');
+                if (invalidEl) {
+                    const label = document.querySelector(`label[for="${invalidEl.id}"]`) || invalidEl.closest('label');
+                    const fieldName = label ? label.innerText.replace(/[*:]/g, '').trim() : (invalidEl.placeholder || invalidEl.id || invalidEl.name || 'Campo');
+                    return `Campo "${fieldName}" -> ${invalidEl.validationMessage}`;
+                }
+                return null;
+            }""")
+            if invalid_field_msg:
+                raise Exception(f"Validación HTML5: {invalid_field_msg}")
+
             # Click Guardar
             page.get_by_role("button", name=" Guardar").click()
+            page.wait_for_timeout(1000)
+
+            # Check for visible error feedback elements or alerts on the page
+            error_msg = None
+            error_locators = [
+                ".invalid-feedback",
+                ".text-danger",
+                ".alert-danger",
+                "[role='alert']",
+                ".error-message",
+                ".help-block-error"
+            ]
+            for selector in error_locators:
+                loc = page.locator(selector)
+                try:
+                    count = loc.count()
+                    for i in range(count):
+                        el = loc.nth(i)
+                        if el.is_visible():
+                            txt = el.inner_text().strip()
+                            if txt:
+                                error_msg = f"Formulario: {txt}"
+                                break
+                except:
+                    pass
+                if error_msg:
+                    break
+            if error_msg:
+                raise Exception(error_msg)
 
             # Click + Nuevo if there are more records to process
             if index < len(df) - 1:
