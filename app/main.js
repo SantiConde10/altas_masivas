@@ -14,7 +14,8 @@ function createWindow() {
       nodeIntegration: false
     },
     show: false, // Don't show until ready-to-show
-    backgroundColor: '#0f172a'
+    backgroundColor: '#0f172a',
+    autoHideMenuBar: true
   });
 
   mainWindow.loadFile('index.html');
