@@ -7,6 +7,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     strategy:
@@ -47,7 +50,7 @@ jobs:
           # Activamos entorno virtual y empaquetamos
           # Usamos bash en ambos OS (Windows runner soporta bash)
           if [ "$RUNNER_OS" == "Windows" ]; then
-            .venv/Scripts/activate
+            source .venv/Scripts/activate
             pyinstaller --onefile --add-data ".env;." src/cli.py
           else
             source .venv/bin/activate
@@ -58,7 +61,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           
       - name: Install Node dependencies
         working-directory: ./app
