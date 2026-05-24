@@ -32,11 +32,11 @@
     ],
     "mac": {
       "target": "dmg",
-      "icon": "assets/LogotipoGAIA_black.png"
+      "icon": "assets/icon.png"
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/LogotipoGAIA_black.png"
+      "icon": "assets/icon.png"
     },
     "publish": [
       {
