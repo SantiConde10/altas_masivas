@@ -39,8 +39,8 @@ def transformar_df(custom_path=None):
         return row.get('PESO VOLUMÉTRICO', '')
 
     try:
-        df['Agregar SKU'] = df.apply(lambda row: {row['Agregar SKU']: row['Cantidad']} if str(row['Agregar SKU']).strip() != '' else {}, axis=1)
-        df['Grupo'] = df['PROVEEDOR'].replace('', None).ffill()
+        df['dict_row'] = df.apply(lambda row: {row['Agregar SKU']: row['Cantidad']} if str(row['Agregar SKU']).strip() != '' else {}, axis=1)
+        df['Grupo'] = df['SKU'].replace('', None).ffill()
         df['PESO VOLUMÉTRICO'] = df.apply(calcular_peso_volumetrico, axis=1)
     except KeyError as e:
         print(f"Error: Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
@@ -49,30 +49,32 @@ def transformar_df(custom_path=None):
         print(f"Error durante la transformación de columnas: {e}")
         return None
 
-    def unir_jsons(lista_de_jsons):
-        json_unido = {}
-        for j in lista_de_jsons:
-            if isinstance(j, dict):
-                json_unido.update(j)
-        return json_unido
+    def consolidar_jsons(subset):
+        resultado_dict = {}
+        for d in subset['dict_row']:
+            if isinstance(d, dict):
+                resultado_dict.update(d)
+        return resultado_dict
 
-    # 3. Agrupación de los datos
+    # 3. Agrupación de los datos y limpieza final
     try:
-        reglas_agrupacion = {columna: 'first' for columna in df.columns if columna not in ['Grupo', 'Agregar SKU']}
-        reglas_agrupacion['Agregar SKU'] = unir_jsons
-        df_final = df.groupby('Grupo', as_index=False).agg(reglas_agrupacion)
+        consolidados = df.groupby('Grupo').apply(consolidar_jsons)
+        df['group_SKU'] = df['Grupo'].map(consolidados)
+        
+        df['PROVEEDOR'] = df['PROVEEDOR'].replace('', pd.NA)
+        df['SKU'] = df['SKU'].replace('', pd.NA)
+        df['DESCRIPCION'] = df['DESCRIPCION'].replace('', pd.NA)
+        df.dropna(subset=['PROVEEDOR', 'SKU', 'DESCRIPCION'], how='all', inplace=True)
+        
+        df.drop(columns=["dict_row"], inplace=True)
+        df.reset_index(drop=True, inplace=True)
+        
+        if 'Columna_Control' in df.columns:
+            df = df.drop(columns=['Columna_Control'])
+            
+        df_final = df.fillna('')
     except Exception as e:
         print(f"Error al agrupar los datos: {e}")
-        return None
-
-    # 4. Limpieza final
-    try:
-        if 'Columna_Control' in df_final.columns:
-            df_final = df_final.drop(columns=['Columna_Control'])
-        
-        df_final = df_final.astype(object).fillna('')
-    except Exception as e:
-        print(f"Error en la limpieza final de los datos: {e}")
         return None
 
     try:
