@@ -64,7 +64,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let totalRows = 0;
   let successRows = 0;
   let errorRows = 0;
+  let existingRows = 0;
   let failedSKUs = [];
+  let allResults = [];
+  let pythonLogBuffer = '';
 
   function setStatus(status, text) {
     if (statusIndicator) {
@@ -220,7 +223,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       totalRows = 0;
       successRows = 0;
       errorRows = 0;
+      existingRows = 0;
       failedSKUs = [];
+      allResults = [];
+      pythonLogBuffer = '';
+      
+      const existingCountEl = document.getElementById('existing-count');
+      if (existingCountEl) existingCountEl.textContent = '0';
+      
+      const resultsSection = document.getElementById('results-section');
+      if (resultsSection) resultsSection.style.display = 'block';
+      renderResultsTable();
       
       const successCountEl = document.getElementById('success-count');
       const errorCountEl = document.getElementById('error-count');
@@ -243,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updateProgress() {
-    const processed = successRows + errorRows;
+    const processed = successRows + errorRows + existingRows;
     const progressCountEl = document.getElementById('progress-count');
     const progressPercentageEl = document.getElementById('progress-percentage');
     const progressBarFillEl = document.getElementById('progress-bar-fill');
@@ -260,7 +273,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for logs from Python
   window.electronAPI.onPythonLog((data) => {
-    const lines = data.split('\n');
+    pythonLogBuffer += data;
+    const lines = pythonLogBuffer.split('\n');
+    pythonLogBuffer = lines.pop(); // save the incomplete line for the next chunk
+
     lines.forEach(line => {
       const trimmed = line.trim();
       if (!trimmed) return;
@@ -290,26 +306,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         successRows++;
         const successCountEl = document.getElementById('success-count');
         if (successCountEl) successCountEl.textContent = successRows;
+        
+        const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
+        const skuStr = matchSku ? matchSku[1] : 'Fila';
+        allResults.push({ status: 'éxito', sku: skuStr, reason: '' });
+        
         updateProgress();
+        renderResultsTable();
       }
 
       // Check for ERROR result
       if (trimmed.includes('RESULTADO') && trimmed.includes('ESTADO: ERROR')) {
-        errorRows++;
-        const errorCountEl = document.getElementById('error-count');
-        if (errorCountEl) errorCountEl.textContent = errorRows;
-        
         const matchReason = trimmed.match(/MOTIVO:\s*(.*)/);
         const reasonStr = matchReason ? matchReason[1] : 'Error desconocido';
         const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
         const skuStr = matchSku ? matchSku[1] : 'Fila';
 
-        failedSKUs.push({ sku: skuStr, reason: reasonStr });
+        if (reasonStr.toLowerCase().includes('ya existe') || reasonStr.toLowerCase().includes('existente')) {
+          existingRows++;
+          const existingCountEl = document.getElementById('existing-count');
+          if (existingCountEl) existingCountEl.textContent = existingRows;
+          allResults.push({ status: 'existente', sku: skuStr, reason: 'El SKU ya estaba registrado' });
+        } else {
+          errorRows++;
+          const errorCountEl = document.getElementById('error-count');
+          if (errorCountEl) errorCountEl.textContent = errorRows;
+          failedSKUs.push({ sku: skuStr, reason: reasonStr });
+          allResults.push({ status: 'fallo', sku: skuStr, reason: reasonStr });
+        }
 
         if (progressSubtextEl) {
           progressSubtextEl.textContent = `Error en SKU ${skuStr}: ${reasonStr}`;
         }
         updateProgress();
+        renderResultsTable();
       }
     });
   });
@@ -325,6 +355,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   window.electronAPI.onPythonFinished((code) => {
+    if (pythonLogBuffer.trim()) {
+      const trimmed = pythonLogBuffer.trim();
+      if (trimmed.includes('RESULTADO') && trimmed.includes('ESTADO: OK')) {
+        successRows++;
+        const successCountEl = document.getElementById('success-count');
+        if (successCountEl) successCountEl.textContent = successRows;
+        
+        const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
+        const skuStr = matchSku ? matchSku[1] : 'Fila';
+        allResults.push({ status: 'éxito', sku: skuStr, reason: '' });
+        
+        updateProgress();
+        renderResultsTable();
+      }
+      if (trimmed.includes('RESULTADO') && trimmed.includes('ESTADO: ERROR')) {
+        const matchReason = trimmed.match(/MOTIVO:\s*(.*)/);
+        const reasonStr = matchReason ? matchReason[1] : 'Error desconocido';
+        const matchSku = trimmed.match(/SKU:\s*([^\s|]+)/);
+        const skuStr = matchSku ? matchSku[1] : 'Fila';
+
+        if (reasonStr.toLowerCase().includes('ya existe') || reasonStr.toLowerCase().includes('existente')) {
+          existingRows++;
+          const existingCountEl = document.getElementById('existing-count');
+          if (existingCountEl) existingCountEl.textContent = existingRows;
+          allResults.push({ status: 'existente', sku: skuStr, reason: 'El SKU ya estaba registrado' });
+        } else {
+          errorRows++;
+          const errorCountEl = document.getElementById('error-count');
+          if (errorCountEl) errorCountEl.textContent = errorRows;
+          failedSKUs.push({ sku: skuStr, reason: reasonStr });
+          allResults.push({ status: 'fallo', sku: skuStr, reason: reasonStr });
+        }
+        
+        updateProgress();
+        renderResultsTable();
+      }
+      pythonLogBuffer = '';
+    }
+
     isRunning = false;
     if (runBtn) runBtn.disabled = false;
     if (dropZone) dropZone.style.pointerEvents = 'auto';
@@ -355,4 +424,79 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
+
+  // Funciones para la tabla de resultados
+  function renderResultsTable() {
+    const tableBody = document.getElementById('results-table-body');
+    if (!tableBody) return;
+
+    const searchInput = document.getElementById('search-sku');
+    const filterSelect = document.getElementById('filter-status');
+    
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const filterStatus = filterSelect ? filterSelect.value : 'todos';
+
+    tableBody.innerHTML = '';
+
+    allResults.forEach(item => {
+      if (filterStatus !== 'todos' && item.status !== filterStatus) return;
+      if (searchTerm && !item.sku.toLowerCase().includes(searchTerm)) return;
+
+      const tr = document.createElement('tr');
+      
+      let statusColor = '#94a3b8';
+      let statusBg = '#f1f5f9';
+      let statusText = 'Desconocido';
+      
+      if (item.status === 'éxito') {
+        statusColor = '#059669';
+        statusBg = '#d1fae5';
+        statusText = 'Éxito';
+      } else if (item.status === 'existente') {
+        statusColor = '#d97706';
+        statusBg = '#fef3c7';
+        statusText = 'Ya Existe';
+      } else if (item.status === 'fallo') {
+        statusColor = '#dc2626';
+        statusBg = '#fee2e2';
+        statusText = 'Fallo';
+      }
+
+      const tdStatus = document.createElement('td');
+      tdStatus.style.padding = '10px';
+      tdStatus.style.borderBottom = '1px solid var(--border-color)';
+      tdStatus.innerHTML = `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: ${statusBg}; color: ${statusColor};">${statusText}</span>`;
+
+      const tdSku = document.createElement('td');
+      tdSku.style.padding = '10px';
+      tdSku.style.borderBottom = '1px solid var(--border-color)';
+      tdSku.style.fontWeight = '500';
+      tdSku.textContent = item.sku;
+
+      const tdReason = document.createElement('td');
+      tdReason.style.padding = '10px';
+      tdReason.style.borderBottom = '1px solid var(--border-color)';
+      tdReason.style.color = 'var(--text-secondary)';
+      tdReason.textContent = item.reason;
+
+      tr.appendChild(tdStatus);
+      tr.appendChild(tdSku);
+      tr.appendChild(tdReason);
+      
+      tableBody.appendChild(tr);
+    });
+  }
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'search-sku') {
+      renderResultsTable();
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'filter-status') {
+      renderResultsTable();
+    }
+  });
+
 });

@@ -218,7 +218,7 @@
 /* Stats Row */
 .stats-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
   margin-top: 0.5rem;
 }
@@ -256,6 +256,17 @@
 .error-card .stat-icon {
   background-color: rgba(239, 68, 68, 0.1);
   color: var(--status-error);
+}
+
+.existing-card {
+  background-color: rgba(234, 179, 8, 0.05);
+  border: 1px solid rgba(234, 179, 8, 0.15);
+  color: #854d0e;
+}
+
+.existing-card .stat-icon {
+  background-color: rgba(234, 179, 8, 0.1);
+  color: #ca8a04;
 }
 
 .stat-icon {

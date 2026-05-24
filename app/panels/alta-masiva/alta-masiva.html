@@ -79,6 +79,20 @@
         </div>
       </div>
 
+      <div class="stat-card existing-card">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Ya existían</span>
+          <span class="stat-value" id="existing-count">0</span>
+        </div>
+      </div>
+
       <div class="stat-card error-card">
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -90,6 +104,36 @@
           <span class="stat-label">Fallidos</span>
           <span class="stat-value" id="error-count">0</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Results Table Section -->
+    <div class="results-section" style="margin-top: 2rem; display: none;" id="results-section">
+      <div class="results-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">Detalle de Resultados</h3>
+        <div class="results-filters" style="display: flex; gap: 10px;">
+          <input type="text" id="search-sku" placeholder="Buscar por SKU..." style="padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-color); color: var(--text-primary);">
+          <select id="filter-status" style="padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-color); color: var(--text-primary);">
+            <option value="todos">Todos</option>
+            <option value="éxito">Éxito</option>
+            <option value="existente">Ya Existía</option>
+            <option value="fallo">Fallo</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead style="background: var(--bg-sidebar); position: sticky; top: 0; z-index: 10;">
+            <tr>
+              <th style="padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary);">Estatus</th>
+              <th style="padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary);">SKU</th>
+              <th style="padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary);">Descripción del Fallo</th>
+            </tr>
+          </thead>
+          <tbody id="results-table-body">
+            <!-- Filas generadas dinámicamente -->
+          </tbody>
+        </table>
       </div>
     </div>
 
