@@ -5,19 +5,21 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
-    
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,17 +27,17 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          
+          python-version: "3.11"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v2
-        
+
       - name: Install Python dependencies
         run: |
           uv venv
           uv pip install -r pyproject.toml
           uv pip install pyinstaller
-          
+
       - name: Build Python Executable
         env:
           APP_USERNAME: ${{ secrets.APP_USERNAME }}
@@ -46,7 +48,7 @@ jobs:
           echo "USUARIO=$APP_USERNAME" > .env
           echo "PASSWORD=$APP_PASSWORD" >> .env
           echo "URL=$APP_URL" >> .env
-          
+
           # Activamos entorno virtual y empaquetamos
           # Usamos bash en ambos OS (Windows runner soporta bash)
           if [ "$RUNNER_OS" == "Windows" ]; then
@@ -57,16 +59,16 @@ jobs:
             pyinstaller --onefile --add-data ".env:." src/cli.py
           fi
         shell: bash
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          
+          node-version: "24"
+
       - name: Install Node dependencies
         working-directory: ./app
         run: npm install
-        
+
       - name: Build and Publish Electron App
         working-directory: ./app
         env:
