@@ -34,15 +34,24 @@ jobs:
           uv pip install pyinstaller
           
       - name: Build Python Executable
+        env:
+          APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          APP_URL: ${{ secrets.APP_URL }}
         run: |
+          # Crear archivo .env con los secretos de GitHub para empaquetarlo
+          echo "USUARIO=$APP_USERNAME" > .env
+          echo "PASSWORD=$APP_PASSWORD" >> .env
+          echo "URL=$APP_URL" >> .env
+          
           # Activamos entorno virtual y empaquetamos
           # Usamos bash en ambos OS (Windows runner soporta bash)
           if [ "$RUNNER_OS" == "Windows" ]; then
             .venv/Scripts/activate
-            pyinstaller --onefile src/cli.py
+            pyinstaller --onefile --add-data ".env;." src/cli.py
           else
             source .venv/bin/activate
-            pyinstaller --onefile src/cli.py
+            pyinstaller --onefile --add-data ".env:." src/cli.py
           fi
         shell: bash
         

@@ -7,9 +7,16 @@ from dotenv import load_dotenv
 from lectura_csv import transformar_df
 import pandas as pd
 
-# Cargar variables de entorno usando la ruta absoluta de secrets/.env
-base_dir = os.path.dirname(os.path.abspath(__file__))
-dotenv_path = os.path.join(base_dir, "..", "secrets", ".env")
+# Cargar variables de entorno manejando ejecución local y empaquetada (PyInstaller)
+if getattr(sys, 'frozen', False):
+    # Si se ejecuta como ejecutable empaquetado
+    base_dir = sys._MEIPASS
+    dotenv_path = os.path.join(base_dir, ".env")
+else:
+    # Si se ejecuta como script normal
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    dotenv_path = os.path.join(base_dir, "..", "secrets", ".env")
+
 load_dotenv(dotenv_path)
 
 usuario = os.getenv("USUARIO")
