@@ -8,14 +8,24 @@
   <!-- File Upload Drag & Drop Zone -->
   <div id="drop-zone" class="drop-zone">
     <div class="drop-zone-content">
-      <svg class="drop-icon" viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="drop-icon" id="drop-icon" viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="17 8 12 3 7 8"></polyline>
         <line x1="12" y1="3" x2="12" y2="15"></line>
       </svg>
-      <h3>Arrastra tu archivo CSV aquí</h3>
-      <p>o haz clic para explorar en tu computadora</p>
-      <span class="file-name-display" id="file-name-display">Ningún archivo seleccionado</span>
+      <div id="drop-zone-instructions">
+        <h3>Arrastra tu archivo CSV aquí</h3>
+        <p>o haz clic para explorar en tu computadora</p>
+      </div>
+      <div id="file-selected-container" style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; background: rgba(0,0,0,0.05); padding: 8px 16px; border-radius: 8px;">
+        <span class="file-name-display active" id="file-name-display" style="margin: 0; font-weight: 500;"></span>
+        <button id="remove-file-btn" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" title="Quitar archivo" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='none'">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
     </div>
     <input type="file" id="file-input" accept=".csv" style="display: none;">
   </div>

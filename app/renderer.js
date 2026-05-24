@@ -76,8 +76,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Handle file selection / drop
   if (dropZone) {
-    dropZone.addEventListener('click', async () => {
+    dropZone.addEventListener('click', async (e) => {
       if (isRunning) return;
+      
+      const removeBtn = e.target.closest('#remove-file-btn');
+      if (removeBtn) {
+        selectedFilePath = null;
+        if (fileInput) fileInput.value = '';
+        
+        const dropInstructions = document.getElementById('drop-zone-instructions');
+        const fileSelectedContainer = document.getElementById('file-selected-container');
+        const dropIcon = document.getElementById('drop-icon');
+        
+        if (dropInstructions) dropInstructions.style.display = 'block';
+        if (dropIcon) dropIcon.style.display = 'block';
+        if (fileSelectedContainer) fileSelectedContainer.style.display = 'none';
+        if (fileNameDisplay) {
+            fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+            fileNameDisplay.classList.remove('active');
+        }
+        
+        if (runBtn) runBtn.disabled = true;
+        setStatus('idle', 'Selecciona un archivo CSV');
+        return;
+      }
+
+      if (selectedFilePath) return;
+
       try {
         const filePath = await window.electronAPI.selectCSVFile();
         if (filePath) {
@@ -118,6 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     dropZone.addEventListener('drop', (e) => {
       if (isRunning) return;
+      if (selectedFilePath) return;
       const dt = e.dataTransfer;
       const files = dt.files;
       if (files.length > 0) {
@@ -131,6 +157,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     fileNameDisplay.textContent = fileName;
     fileNameDisplay.classList.add('active');
     
+    const dropInstructions = document.getElementById('drop-zone-instructions');
+    const fileSelectedContainer = document.getElementById('file-selected-container');
+    const dropIcon = document.getElementById('drop-icon');
+    
+    if (dropInstructions) dropInstructions.style.display = 'none';
+    if (dropIcon) dropIcon.style.display = 'none';
+    if (fileSelectedContainer) fileSelectedContainer.style.display = 'flex';
+
     if (runBtn) runBtn.disabled = true;
     setStatus('running', 'Validando estructura del archivo...');
 
@@ -141,6 +175,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         setStatus('success', 'Listo, puedes empezar');
       } else {
         selectedFilePath = null;
+        if (fileInput) fileInput.value = '';
+        if (dropInstructions) dropInstructions.style.display = 'block';
+        if (dropIcon) dropIcon.style.display = 'block';
+        if (fileSelectedContainer) fileSelectedContainer.style.display = 'none';
+
         fileNameDisplay.textContent = 'Ningún archivo seleccionado';
         fileNameDisplay.classList.remove('active');
         if (runBtn) runBtn.disabled = true;
