@@ -535,8 +535,6 @@ def procesar_fila(page, row) -> None:
             click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
     except Exception as e:
         raise Exception(f"Ficha técnica -> {str(e)}")
-    
-    page.pause()
 
 def reset_to_clean_form(page):
     print("Restableciendo el navegador a un estado limpio...")
@@ -633,12 +631,56 @@ def run(playwright: Playwright) -> None:
                 raise Exception(f"Validación HTML5: {invalid_field_msg}")
 
             # Guardar registro
+            last_error_response = {}
+            def handle_response(response):
+                try:
+                    if response.request.method in ["POST", "PUT", "PATCH"]:
+                        if response.status >= 400:
+                            try:
+                                body = response.json()
+                                last_error_response['status'] = response.status
+                                last_error_response['body'] = body
+                            except:
+                                try:
+                                    last_error_response['status'] = response.status
+                                    last_error_response['body'] = response.text()
+                                except:
+                                    pass
+                except:
+                    pass
+
+            page.on("response", handle_response)
+            
             try:
                 guardar_btn = page.get_by_role("button", name=" Guardar")
                 robust_click(page, guardar_btn, timeout=5000)
-                page.wait_for_timeout(1000)
+                page.wait_for_timeout(3000)
+                page.screenshot(path="guardar_click.png")
+                
+                try:
+                    # Esperar a que se resuelvan las peticiones de red
+                    page.wait_for_load_state("networkidle", timeout=3000)
+                except:
+                    page.wait_for_timeout(1000)
+                    
             except Exception as e:
+                page.remove_listener("response", handle_response)
                 raise Exception(f"Error al hacer click en el botón 'Guardar': {e}")
+                
+            page.remove_listener("response", handle_response)
+            
+            if last_error_response:
+                body = last_error_response.get('body', '')
+                status = last_error_response.get('status', 'Error')
+                backend_msg = ""
+                if isinstance(body, dict):
+                    backend_msg = body.get('message') or body.get('error') or body.get('detail') or str(body)
+                else:
+                    backend_msg = str(body)
+                
+                if backend_msg:
+                    # Si recibimos un error de red, lo lanzamos para que se muestre en el UI
+                    raise Exception(f"Respuesta del servidor ({status}): {backend_msg}")
 
             # Validar mensajes de error visibles en la página tras guardar
             error_msg = None
@@ -648,7 +690,12 @@ def run(playwright: Playwright) -> None:
                 ".alert-danger",
                 "[role='alert']",
                 ".error-message",
-                ".help-block-error"
+                ".help-block-error",
+                ".toast-message",
+                ".Toastify__toast-body",
+                ".snack-bar",
+                ".notification-message",
+                ".dx-toast-message"
             ]
             for selector in error_locators:
                 loc = page.locator(selector)
@@ -668,8 +715,65 @@ def run(playwright: Playwright) -> None:
 
             # Verificar si se disparó alguna alerta nativa
             if hasattr(page, 'dialog_messages') and page.dialog_messages:
-                alert_text = " | ".join(page.dialog_messages)
+                alert_text = " | ".join(filter(None, page.dialog_messages))
                 page.dialog_messages.clear()
+                
+                if not alert_text.strip():
+                    faltantes = page.evaluate("""() => {
+                        const emptyFields = [];
+                        
+                        // 1. Buscar elementos marcados visualmente con error (DevExpress, Bootstrap, etc.)
+                        document.querySelectorAll('.dx-invalid, .has-error, .is-invalid, .ng-invalid.ng-touched').forEach(el => {
+                            let name = null;
+                            const label = el.closest('.form-group, .dx-field, div')?.querySelector('label');
+                            if (label) name = label.innerText.replace(/[*:]/g, '').trim();
+                            if (!name && el.placeholder) name = el.placeholder;
+                            if (name && !emptyFields.includes(name)) emptyFields.push(name);
+                        });
+
+                        // 2. Buscar campos con etiqueta obligatoria (*) que estén vacíos
+                        document.querySelectorAll('label').forEach(label => {
+                            if (label.innerText.includes('*')) {
+                                let name = label.innerText.replace(/[*:]/g, '').trim();
+                                let el = null;
+                                
+                                if (label.htmlFor) {
+                                    el = document.getElementById(label.htmlFor);
+                                } else {
+                                    const container = label.closest('.form-group, .dx-field, div.row, div');
+                                    if (container) el = container.querySelector('input:not([type="hidden"]), select, textarea, .dx-texteditor-input');
+                                }
+                                
+                                if (!el) {
+                                    let next = label.nextElementSibling;
+                                    if (next && (next.tagName === 'INPUT' || next.querySelector('input, .dx-texteditor-input'))) {
+                                        el = next.tagName === 'INPUT' ? next : next.querySelector('input, .dx-texteditor-input');
+                                    }
+                                }
+                                
+                                if (el) {
+                                    let isEmpty = false;
+                                    if (el.type === 'checkbox' || el.type === 'radio') isEmpty = !el.checked;
+                                    else if (!el.value || el.value.trim() === '') isEmpty = true;
+                                    
+                                    if (isEmpty && name && !emptyFields.includes(name)) emptyFields.push(name);
+                                }
+                                
+                                // Para componentes complejos de DevExpress sin input nativo directo
+                                const dxContainer = label.closest('.dx-field, .form-group')?.querySelector('.dx-texteditor');
+                                if (dxContainer && dxContainer.classList.contains('dx-texteditor-empty')) {
+                                    if (name && !emptyFields.includes(name)) emptyFields.push(name);
+                                }
+                            }
+                        });
+                        return emptyFields.length > 0 ? emptyFields.join(', ') : null;
+                    }""")
+                    
+                    if faltantes:
+                        alert_text = f"Faltan campos obligatorios o son inválidos: {faltantes}"
+                    else:
+                        alert_text = "Falta información o hay un campo inválido (el sistema no especificó cuál)."
+                        
                 if any(k in alert_text.lower() for k in ["ya existe", "duplicado", "existe", "registrado"]):
                     raise Exception(f"SKU_EXISTENTE: Alerta del sistema -> {alert_text}")
                 error_msg = f"Alerta del sistema: {alert_text}"
@@ -698,18 +802,33 @@ def run(playwright: Playwright) -> None:
                     raise Exception(f"No se pudo crear el siguiente formulario vacío con '+ Nuevo': {e}")
 
             print(f"RESULTADO | FILA: {index+1} | ESTADO: OK | SKU: {row['SKU']}")
+            sys.stdout.flush()
         except Exception as e:
-            is_sku_existente = "SKU_EXISTENTE" in str(e) or any(k in str(e).lower() for k in ["ya existe", "duplicado", "existe", "registrado"])
-            motivo_err = "El SKU ya existe en el sistema." if is_sku_existente else str(e)
+            err_str = str(e).lower()
+            is_sku_existente = "sku_existente" in err_str or any(k in err_str for k in ["ya existe", "duplicado", "existe", "registrado", "ak_articulossku", "unique key"])
+            is_timeout = "timeout" in err_str or "time out" in err_str
+            
+            if is_sku_existente:
+                motivo_err = "El SKU ya existe en el sistema."
+            elif is_timeout:
+                motivo_err = "Time Out: Un campo posiblemente está mal escrito o no se encontró la opción requerida."
+            else:
+                motivo_err = str(e).strip()
+                if motivo_err == "Alerta del sistema:":
+                    motivo_err = "Alerta del sistema bloqueó el guardado (revisa campos obligatorios)."
+                
             print(f"RESULTADO | FILA: {index+1} | ESTADO: ERROR | SKU: {row['SKU']} | MOTIVO: {motivo_err}")
-            if "Target page, context or browser has been closed" in str(e):
+            sys.stdout.flush()
+            
+            if "target page, context or browser has been closed" in err_str:
                 break
-            # Si es un SKU existente o no es el último registro, intentamos restablecer la interfaz para el siguiente
-            if is_sku_existente or index < len(df) - 1:
+            # Si es un error recuperable o no es el último registro, intentamos restablecer la interfaz para el siguiente
+            if is_sku_existente or is_timeout or index < len(df) - 1:
                 try:
                     reset_to_clean_form(page)
                 except Exception as reset_err:
                     print(f"Error crítico de recuperación: {reset_err}", file=sys.stderr)
+                    sys.stderr.flush()
                     break
 
     # ---------------------
