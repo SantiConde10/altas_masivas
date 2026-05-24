@@ -4,11 +4,46 @@
   "description": "Aplicación de escritorio para la carga masiva de artículos en GAIA",
   "main": "main.js",
   "scripts": {
-    "start": "electron . --no-sandbox"
+    "start": "electron . --no-sandbox",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
   },
   "author": "Santi Conde",
   "license": "ISC",
+  "dependencies": {
+    "electron-updater": "^6.1.8"
+  },
   "devDependencies": {
-    "electron": "^30.0.0"
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.gaia.altamasiva",
+    "productName": "GAIA Altas Masivas",
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      {
+        "from": "../dist",
+        "to": "python_bin",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/LogotipoGAIA_black.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/LogotipoGAIA_black.png"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "SantiConde10",
+        "repo": "altas_masivas"
+      }
+    ]
   }
 }

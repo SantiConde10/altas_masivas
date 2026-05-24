@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeImage } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -35,6 +36,9 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+  
+  // Buscar actualizaciones en segundo plano
+  autoUpdater.checkForUpdatesAndNotify();
 });
 
 app.on('window-all-closed', function () {
@@ -57,31 +61,23 @@ ipcMain.handle('select-csv-file', async () => {
 ipcMain.handle('validate-csv-file', (event, filePath) => {
   return new Promise((resolve) => {
     const isWin = process.platform === 'win32';
-    const pythonPath = isWin
-      ? path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')
-      : path.join(__dirname, '..', '.venv', 'bin', 'python');
-    const scriptDir = path.join(__dirname, '..');
+    
+    let pythonCmd, args, cwdPath;
+    
+    if (app.isPackaged) {
+      pythonCmd = path.join(process.resourcesPath, 'python_bin', isWin ? 'cli.exe' : 'cli');
+      args = ['validate', filePath];
+      cwdPath = path.dirname(pythonCmd);
+    } else {
+      pythonCmd = isWin
+        ? path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')
+        : path.join(__dirname, '..', '.venv', 'bin', 'python');
+      args = ['-u', path.join(__dirname, '..', 'src', 'cli.py'), 'validate', filePath];
+      cwdPath = path.join(__dirname, '..');
+    }
 
-    const code = `
-import sys
-import os
-sys.path.insert(0, os.path.abspath('src'))
-from lectura_csv import transformar_df
-try:
-    df = transformar_df(sys.argv[1])
-    if df is not None and len(df) > 0:
-        print("OK")
-        sys.exit(0)
-    else:
-        print("Error: El archivo no contiene datos validos o fallo la transformacion.")
-        sys.exit(1)
-except Exception as e:
-    print(f"Error: {str(e)}")
-    sys.exit(1)
-`;
-
-    const pythonProcess = spawn(pythonPath, ['-c', code, filePath], {
-      cwd: scriptDir
+    const pythonProcess = spawn(pythonCmd, args, {
+      cwd: cwdPath
     });
 
     let output = '';
@@ -112,25 +108,30 @@ except Exception as e:
 // Handle executing the python script
 ipcMain.on('run-python-script', (event, filePath) => {
   const isWin = process.platform === 'win32';
-  const pythonPath = isWin
-    ? path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')
-    : path.join(__dirname, '..', '.venv', 'bin', 'python');
-  const scriptPath = path.join(__dirname, '..', 'src', 'subir_altas.py');
-  const cwdPath = path.join(__dirname, '..');
 
-  console.log(`Ejecutando Python desde: ${pythonPath}`);
-  console.log(`Script: ${scriptPath}`);
-  if (filePath) {
-    console.log(`Con archivo seleccionado: ${filePath}`);
+  let pythonCmd, args, cwdPath;
+  
+  if (app.isPackaged) {
+    pythonCmd = path.join(process.resourcesPath, 'python_bin', isWin ? 'cli.exe' : 'cli');
+    args = ['run'];
+    cwdPath = path.dirname(pythonCmd);
+  } else {
+    pythonCmd = isWin
+      ? path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')
+      : path.join(__dirname, '..', '.venv', 'bin', 'python');
+    args = ['-u', path.join(__dirname, '..', 'src', 'cli.py'), 'run'];
+    cwdPath = path.join(__dirname, '..');
   }
 
-  const args = ['-u', scriptPath];
   if (filePath) {
     args.push(filePath);
   }
 
+  console.log(`Ejecutando Python desde: ${pythonCmd}`);
+  console.log(`Args: ${args.join(' ')}`);
+
   // We run python in unbuffered mode (-u) so we get logs immediately
-  const pythonProcess = spawn(pythonPath, args, {
+  const pythonProcess = spawn(pythonCmd, args, {
     cwd: cwdPath
   });
 
