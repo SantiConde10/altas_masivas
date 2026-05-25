@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron . --no-sandbox",
     "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac"
+    "build:mac": "electron-builder --mac --x64"
   },
   "author": "Santi Conde",
   "license": "ISC",
