@@ -6,6 +6,10 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 from dotenv import load_dotenv
 from lectura_csv import transformar_df
 import pandas as pd
+import logging
+import math
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
 # Cargar variables de entorno manejando ejecución local y empaquetada (PyInstaller)
 if getattr(sys, 'frozen', False):
@@ -30,18 +34,18 @@ if not password: missing_vars.append("PASSWORD")
 if not url_gaia: missing_vars.append("URL")
 
 if missing_vars:
-    print(f"Error: Faltan variables de entorno requeridas en el archivo .env: {', '.join(missing_vars)}", file=sys.stderr)
+    logging.error(f"Faltan variables de entorno requeridas en el archivo .env: {', '.join(missing_vars)}")
     sys.exit(1)
 
 custom_csv_path = sys.argv[1] if len(sys.argv) > 1 else None
 try:
     df = transformar_df(custom_csv_path)
 except Exception as e:
-    print(f"Error: Ocurrió un error inesperado al transformar el archivo CSV: {e}", file=sys.stderr)
+    logging.error(f"Ocurrió un error inesperado al transformar el archivo CSV: {e}")
     sys.exit(1)
 
 if df is None or df.empty:
-    print("Error: El DataFrame transformado está vacío o no se pudo generar a partir del archivo CSV.", file=sys.stderr)
+    logging.error("El DataFrame transformado está vacío o no se pudo generar a partir del archivo CSV.")
     sys.exit(1)
 
 def clean_val(val):
@@ -65,12 +69,12 @@ def clean_num(val, default=""):
         return default
     return val_str
 
-def robust_click(page, locator, timeout=5000):
+def robust_click(page, locator):
     try:
-        locator.click(timeout=timeout)
+        locator.click()
     except Exception:
         try:
-            locator.click(force=True, timeout=timeout)
+            locator.click(force=True)
         except Exception:
             locator.evaluate("el => el.click()")
 
@@ -78,18 +82,11 @@ def click_dropdown_option(page, label_text, value):
     try:
         # Localizar el botón del dropdown al lado de la etiqueta y hacer click para abrirlo
         dropdown_btn = page.locator("label").filter(has_text=label_text).locator("xpath=following::button[contains(@class, 'form-control')]").first
-        robust_click(page, dropdown_btn, timeout=5000)
-    except Exception as e:
-        raise Exception(f"No se pudo abrir el menú desplegable para '{label_text}'. Detalle: {str(e)}")
+        robust_click(page, dropdown_btn)
+    except Exception:
+        raise Exception(f"No se pudo abrir la lista de '{label_text}'.")
     
     try:
-        # Esperar a que el dropdown cargue sus opciones
-        options = page.locator('button:not(.form-control)')
-        try:
-            options.first.wait_for(state="visible", timeout=3000)
-        except:
-            pass
-
         # Buscar de forma insensible a acentos y mayúsculas
         def strip_accents(text):
             replacements = {
@@ -106,49 +103,59 @@ def click_dropdown_option(page, label_text, value):
         target_clean = strip_accents(value)
         value_lower = value.lower().strip()
 
-        # Encontrar el índice de la opción coincidente usando page.evaluate (es instantáneo)
-        matching_index = page.evaluate("""([valClean, valLower]) => {
-            const buttons = Array.from(document.querySelectorAll('button:not(.form-control)'));
-            
-            const stripAccents = (text) => {
-                const replacements = {
-                    'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
-                    'ü': 'u', 'ñ': 'n',
-                    'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u',
-                    'Ü': 'u', 'Ñ': 'n'
-                };
-                let cleaned = text.toLowerCase();
-                for (const [accented, clean] of Object.entries(replacements)) {
-                    cleaned = cleaned.replaceAll(accented, clean);
-                }
-                return cleaned.trim();
-            };
-
-            // 1. Coincidencia exacta limpia
-            let idx = buttons.findIndex(btn => stripAccents(btn.innerText) === valClean);
-            if (idx !== -1) return idx;
-
-            // 2. Coincidencia por subcadena limpia
-            idx = buttons.findIndex(btn => stripAccents(btn.innerText).includes(valClean));
-            if (idx !== -1) return idx;
-
-            // 3. Coincidencia exacta en minúsculas (sin quitar acentos)
-            idx = buttons.findIndex(btn => btn.innerText.toLowerCase().trim() === valLower);
-            if (idx !== -1) return idx;
-
-            return -1;
-        }""", [target_clean, value_lower])
-
         matched = False
+        matching_index = -1
+
+        # El dropdown puede tener una animación o cargar asíncronamente. 
+        # Hacemos polling durante ~3 segundos (15 intentos de 200ms)
+        for _ in range(15):
+            matching_index = page.evaluate("""([valClean, valLower]) => {
+                const buttons = Array.from(document.querySelectorAll('button:not(.form-control)'));
+                
+                const stripAccents = (text) => {
+                    const replacements = {
+                        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                        'ü': 'u', 'ñ': 'n',
+                        'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u',
+                        'Ü': 'u', 'Ñ': 'n'
+                    };
+                    let cleaned = text.toLowerCase();
+                    for (const [accented, clean] of Object.entries(replacements)) {
+                        cleaned = cleaned.replaceAll(accented, clean);
+                    }
+                    return cleaned.trim();
+                };
+
+                // 1. Coincidencia exacta limpia
+                let idx = buttons.findIndex(btn => stripAccents(btn.innerText) === valClean);
+                if (idx !== -1) return idx;
+
+                // 2. Coincidencia por subcadena limpia
+                idx = buttons.findIndex(btn => stripAccents(btn.innerText).includes(valClean));
+                if (idx !== -1) return idx;
+
+                // 3. Coincidencia exacta en minúsculas (sin quitar acentos)
+                idx = buttons.findIndex(btn => btn.innerText.toLowerCase().trim() === valLower);
+                if (idx !== -1) return idx;
+
+                return -1;
+            }""", [target_clean, value_lower])
+
+            if matching_index != -1:
+                break
+            page.wait_for_timeout(200)
+
         if matching_index != -1:
-            robust_click(page, options.nth(matching_index), timeout=3000)
+            options = page.locator('button:not(.form-control)')
+        if matching_index != -1:
+            robust_click(page, options.nth(matching_index))
             matched = True
 
         if not matched:
             # Fallback a XPath si por alguna razón no se encontró con evaluate
             xpath = f'//button[not(contains(@class, "form-control"))][translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑÜ", "abcdefghijklmnopqrstuvwxyzáéíóúñü") = "{value_lower}"]'
             try:
-                page.locator(xpath).first.click(timeout=3000)
+                page.locator(xpath).first.click()
                 matched = True
             except:
                 pass
@@ -159,11 +166,13 @@ def click_dropdown_option(page, label_text, value):
                 const buttons = Array.from(document.querySelectorAll('button:not(.form-control)'));
                 return buttons.slice(0, 15).map(btn => btn.innerText.trim());
             }""")
-            opts_str = ", ".join(available_opts)
-            raise Exception(f"No se encontró la opción '{value}' en el dropdown '{label_text}'. Opciones disponibles: [{opts_str}]")
+            opts_str = ", ".join(filter(None, available_opts))
+            raise Exception(f"No se encontró '{value}' en '{label_text}'. Algunas opciones eran: [{opts_str}]")
 
     except Exception as e:
-        raise Exception(f"No se pudo encontrar o hacer click en la opción '{value}' del dropdown '{label_text}'. Detalle: {str(e)}")
+        if "No se encontró" in str(e):
+            raise e
+        raise Exception(f"Fallo al seleccionar '{value}' en '{label_text}'.")
 
 def procesar_fila(page, row) -> None:
 
@@ -178,19 +187,19 @@ def procesar_fila(page, row) -> None:
         page.locator("#SKU").click()
         page.locator("#SKU").fill(str(row['SKU']))
         page.locator("#SKU").press("Tab")
-        page.wait_for_timeout(1000)
-        
-        # Validar si el SKU ya existe antes de continuar
-        for selector in [".invalid-feedback", ".text-danger", ".alert-danger", ".error-message"]:
-            loc = page.locator(selector)
+        # Validar si el SKU ya existe antes de continuar (polling de hasta 4 segundos)
+        for _ in range(20):
+            page.wait_for_timeout(200)
             try:
-                count = loc.count()
-                for i in range(count):
-                    el = loc.nth(i)
-                    if el.is_visible():
-                        txt = el.inner_text().strip()
-                        if txt and any(k in txt.lower() for k in ["ya existe", "duplicado", "existe", "registrado"]):
-                            raise Exception(f"SKU_EXISTENTE: El SKU {row['SKU']} ya existe en el sistema. ({txt})")
+                for selector in [".invalid-feedback", ".text-danger", ".alert-danger", ".error-message"]:
+                    loc = page.locator(selector)
+                    count = loc.count()
+                    for i in range(count):
+                        el = loc.nth(i)
+                        if el.is_visible():
+                            txt = el.inner_text().strip()
+                            if txt and any(k in txt.lower() for k in ["ya existe", "duplicado", "existe", "registrado"]):
+                                raise Exception(f"SKU_EXISTENTE: El SKU {row['SKU']} ya existe en el sistema. ({txt})")
             except Exception as check_err:
                 if "SKU_EXISTENTE" in str(check_err):
                     raise check_err
@@ -224,7 +233,7 @@ def procesar_fila(page, row) -> None:
                 if pd.notna(dt1):
                     fecha_1 = dt1.strftime('%Y-%m-%d')
             except Exception as e:
-                print(f"Error parseando Fecha 1 '{val_fecha_1}': {e}")
+                logging.error(f"Error parseando Fecha 1 '{val_fecha_1}': {e}")
 
         fecha_2 = ""
         val_fecha_2 = clean_val(row['Fecha 2'])
@@ -234,14 +243,14 @@ def procesar_fila(page, row) -> None:
                 if pd.notna(dt2):
                     fecha_2 = dt2.strftime('%Y-%m-%d')
             except Exception as e:
-                print(f"Error parseando Fecha 2 '{val_fecha_2}': {e}")
+                logging.error(f"Error parseando Fecha 2 '{val_fecha_2}': {e}")
         
         if fecha_1:
             page.locator("#Vigencia").fill(fecha_1)
         if fecha_2:
             page.locator("input[type=\"date\"]").nth(1).fill(fecha_2)
     except Exception as e:
-        raise Exception(f"Datos de Ventas -> {str(e)}")
+        raise e
 
     # --- Agregar sku ---
     try:
@@ -262,7 +271,7 @@ def procesar_fila(page, row) -> None:
             cell_idx = (grid_idx * 6) + 1
             cell = page.get_by_role("gridcell").nth(cell_idx)
             try:
-                cell.click(timeout=3000)
+                cell.click()
                 cell_clicked = True
             except Exception:
                 pass
@@ -273,9 +282,9 @@ def procesar_fila(page, row) -> None:
                         cell = page.get_by_role("gridcell", name="1", exact=True)
                     else:
                         cell = page.get_by_role("gridcell", name="1").nth(grid_idx * 2)
-                    cell.click(timeout=3000)
+                    cell.click()
                 except Exception as cell_err:
-                    print(f"Advertencia: No se pudo hacer click en la celda de la fila {grid_idx+1}: {cell_err}")
+                    logging.warning(f"No se pudo hacer click en la celda de la fila {grid_idx+1}: {cell_err}")
 
             page.wait_for_timeout(500) # Esperar a que se active el editor
 
@@ -283,21 +292,21 @@ def procesar_fila(page, row) -> None:
             try:
                 input_editor = cell.locator(".dx-texteditor-input")
                 if input_editor.count() > 0:
-                    input_editor.fill(str(sku_cantidad), timeout=5000)
+                    input_editor.fill(str(sku_cantidad))
                 else:
                     # Fallback: buscar cualquier editor de grid activo
                     active_input = page.locator(".dx-datagrid-rowsview .dx-texteditor-input")
                     if active_input.count() > 0:
-                        active_input.fill(str(sku_cantidad), timeout=5000)
+                        active_input.fill(str(sku_cantidad))
                     else:
                         # Fallback a spinbutton
-                        page.get_by_role("spinbutton", name=re.compile("Cantidad", re.IGNORECASE)).first.fill(str(sku_cantidad), timeout=5000)
+                        page.get_by_role("spinbutton", name=re.compile("Cantidad", re.IGNORECASE)).first.fill(str(sku_cantidad))
             except Exception as fill_err:
-                print(f"Advertencia: Error al escribir la cantidad para la fila {grid_idx+1}: {fill_err}")
+                logging.warning(f"Error al escribir la cantidad para la fila {grid_idx+1}: {fill_err}")
                 
             grid_idx += 1
     except Exception as e:
-        raise Exception(f"Agregar SKU -> {str(e)}")
+        raise e
 
     # –– Clasificación –––––––––––––––––––––––––––––––––––
     try:
@@ -390,7 +399,7 @@ def procesar_fila(page, row) -> None:
             page.get_by_role("button").filter(has_text=re.compile(rf"^{re.escape(val_categoria_completa)}$", re.IGNORECASE)).first.click()
             page.get_by_role("button", name="").click()
     except Exception as e:
-        raise Exception(f"Clasificación -> {str(e)}")
+        raise e
 
     # –– Comportamiento de Entrada y Recepción –––––––––––––––––––––––––––––––––––
     try:
@@ -416,7 +425,7 @@ def procesar_fila(page, row) -> None:
         val_tiempo_entrega = clean_val(row['TIEMPO ENTREGA'])
         if val_tiempo_entrega:
             try:
-                page.locator("label").filter(has_text=re.compile(r"^\s*Tiempo Entrega\s*:?\s*$", re.IGNORECASE)).locator("xpath=following::input").first.fill(val_tiempo_entrega, timeout=5000)
+                page.locator("label").filter(has_text=re.compile(r"^\s*Tiempo Entrega\s*:?\s*$", re.IGNORECASE)).locator("xpath=following::input").first.fill(val_tiempo_entrega)
             except:
                 page.locator("[id=\"Tiempo Entrega\"]").fill(val_tiempo_entrega)
 
@@ -425,7 +434,7 @@ def procesar_fila(page, row) -> None:
         if val_comportamiento_umbral:
             click_dropdown_option(page, "Comportamiento bajo umbral", val_comportamiento_umbral)
     except Exception as e:
-        raise Exception(f"Comportamiento de Entrega y Recepción -> {str(e)}")
+        raise e
 
     # –– Costeo –––––––––––––––––––––––––––––––––––
     try:
@@ -444,7 +453,7 @@ def procesar_fila(page, row) -> None:
         val_tipo_cambio = row.get('TIPO DE CAMBIO') or row.get('TIPO CAMBIO') or row.get('Tipo de Cambio') or row.get('Tipo Cambio', '1')
         page.locator("[id=\"Tipo Cambio\"]").fill(clean_num(val_tipo_cambio, "1"))
     except Exception as e:
-        raise Exception(f"Costeo -> {str(e)}")
+        raise e
 
     # –– Material –––––––––––––––––––––––––––––––––––
     try:
@@ -494,7 +503,7 @@ def procesar_fila(page, row) -> None:
         page.locator("[id=\"Cristales\"]").click()
         page.locator("[id=\"Cristales\"]").fill(str(row['CRISTALES']) if pd.notna(row['CRISTALES']) else "")
     except Exception as e:
-        raise Exception(f"Material -> {str(e)}")
+        raise e
 
     # –– Ficha técnica –––––––––––––––––––––––––––––––––––
     try:
@@ -541,55 +550,55 @@ def procesar_fila(page, row) -> None:
         if val_tipo_armado:
             click_dropdown_option(page, "Tipo Armado", val_tipo_armado)
     except Exception as e:
-        raise Exception(f"Ficha técnica -> {str(e)}")
+        raise e
 
 def reset_to_clean_form(page):
-    print("Restableciendo el navegador a un estado limpio...")
+    logging.info("Restableciendo el navegador a un estado limpio...")
     try:
         # Intentamos recargar la página
         page.reload()
-        page.wait_for_load_state("networkidle", timeout=15000)
+        page.wait_for_load_state("networkidle")
         
         # Si se perdió la sesión (por ejemplo, redirigido a login), iniciamos sesión de nuevo
-        if page.get_by_role("textbox", name="Usuario").is_visible(timeout=3000):
+        if page.get_by_role("textbox", name="Usuario").is_visible():
             page.get_by_role("textbox", name="Usuario").fill(usuario)
             page.get_by_role("textbox", name="Contraseña").fill(password)
             robust_click(page, page.get_by_role("button", name="INICIAR SESIÓN"))
-            page.wait_for_load_state("networkidle", timeout=15000)
+            page.wait_for_load_state("networkidle")
         
         # Navegar a través de la interfaz al módulo de inventarios
-        robust_click(page, page.get_by_role("textbox", name="Menú: busca módulos"), timeout=5000)
-        robust_click(page, page.get_by_role("button", name=" Inventarios ▸"), timeout=5000)
+        robust_click(page, page.get_by_role("textbox", name="Menú: busca módulos"))
+        robust_click(page, page.get_by_role("button", name=" Inventarios ▸"))
         
         # Hacemos click en "Nuevo Articulo" para reabrir el formulario
-        robust_click(page, page.get_by_role("button", name=" Nuevo Articulo"), timeout=5000)
-        page.wait_for_load_state("networkidle", timeout=10000)
-        print("Navegador restablecido exitosamente.")
+        robust_click(page, page.get_by_role("button", name=" Nuevo Articulo"))
+        page.wait_for_load_state("networkidle")
+        logging.info("Navegador restablecido exitosamente.")
     except Exception as e:
         raise Exception(f"No se pudo restablecer el navegador a un estado limpio: {e}")
 
 def run(playwright: Playwright) -> None:
     try:
-        browser = playwright.chromium.launch(headless=False)
+        browser = playwright.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         page.dialog_messages = []
         page.on("dialog", lambda d: (page.dialog_messages.append(d.message), d.accept()))
     except Exception as e:
-        print(f"Error crítico al iniciar el navegador Chromium: {e}", file=sys.stderr)
-        return
+        logging.error(f"Error crítico al iniciar el navegador Chromium: {e}")
+        raise e
 
     try:
-        print(f"Conectando a GAIA en {url_gaia}...")
-        page.goto(url_gaia, timeout=30000)
+        logging.info(f"Conectando a GAIA en {url_gaia}...")
+        page.goto(url_gaia)
         page.wait_for_load_state("networkidle")
     except Exception as e:
-        print(f"Error crítico: No se pudo cargar la página {url_gaia}. Detalles: {e}", file=sys.stderr)
+        logging.error(f"Error crítico: No se pudo cargar la página {url_gaia}. Detalles: {e}")
         browser.close()
-        return
+        raise e
 
     try:
-        print("Iniciando sesión...")
+        logging.info("Iniciando sesión...")
         page.get_by_role("textbox", name="Usuario").fill(usuario)
         robust_click(page, page.get_by_role("textbox", name="Contraseña"))
         page.get_by_role("textbox", name="Contraseña").fill(password)
@@ -597,28 +606,30 @@ def run(playwright: Playwright) -> None:
         page.wait_for_load_state("networkidle")
         
         # Validar si seguimos en el login (lo cual indica error de credenciales)
-        if page.get_by_role("textbox", name="Usuario").is_visible(timeout=3000):
+        if page.get_by_role("textbox", name="Usuario").is_visible():
             raise Exception("Credenciales incorrectas o error en el inicio de sesión.")
     except Exception as e:
-        print(f"Error crítico durante el inicio de sesión: {e}", file=sys.stderr)
+        logging.error(f"Error crítico durante el inicio de sesión: {e}")
         browser.close()
-        return
+        raise e
 
     try:
-        print("Navegando a la sección de Inventarios...")
-        robust_click(page, page.get_by_role("textbox", name="Menú: busca módulos"), timeout=5000)
-        robust_click(page, page.get_by_role("button", name=" Inventarios ▸"), timeout=5000)
+        logging.info("Navegando a la sección de Inventarios...")
+        robust_click(page, page.get_by_role("textbox", name="Menú: busca módulos"))
+        robust_click(page, page.get_by_role("button", name=" Inventarios ▸"))
     except Exception as e:
-        print(f"Error crítico al navegar al menú de Inventarios: {e}", file=sys.stderr)
+        logging.error(f"Error crítico al navegar al menú de Inventarios: {e}")
         browser.close()
-        return
+        raise e
 
     for index, row in df.iterrows():
-        print(f"--- Fila {index+1} / {len(df)} | SKU: {row['SKU']} | Proveedor: {row['PROVEEDOR']} ---")
+        # Usar SKU 2 para la visualización en los logs y la interfaz, pero caer a SKU si está vacío
+        val_sku_mostrar = str(row['SKU 2']) if 'SKU 2' in row and pd.notna(row['SKU 2']) and str(row['SKU 2']).strip() else str(row['SKU'])
+        logging.info(f"--- Fila {index+1}/{len(df)} | Subiendo SKU {val_sku_mostrar}...")
         try:
             if index == 0:
                 try:
-                    robust_click(page, page.get_by_role("button", name=" Nuevo Articulo"), timeout=5000)
+                    robust_click(page, page.get_by_role("button", name=" Nuevo Articulo"))
                 except Exception as e:
                     raise Exception(f"No se pudo abrir el formulario de 'Nuevo Articulo': {e}")
 
@@ -660,15 +671,16 @@ def run(playwright: Playwright) -> None:
             
             try:
                 guardar_btn = page.get_by_role("button", name=" Guardar")
-                robust_click(page, guardar_btn, timeout=5000)
-                page.wait_for_timeout(3000)
-                page.screenshot(path="guardar_click.png")
+                robust_click(page, guardar_btn)
+                
+                # Esperar explícitamente 2.5 segundos para que los Toasts de error ("Ya existe", etc.) aparezcan en el DOM
+                page.wait_for_timeout(2500)
                 
                 try:
                     # Esperar a que se resuelvan las peticiones de red
-                    page.wait_for_load_state("networkidle", timeout=3000)
+                    page.wait_for_load_state("networkidle")
                 except:
-                    page.wait_for_timeout(1000)
+                    pass
                     
             except Exception as e:
                 page.remove_listener("response", handle_response)
@@ -834,17 +846,14 @@ def run(playwright: Playwright) -> None:
             # Cargar siguiente formulario si restan registros
             if index < len(df) - 1:
                 try:
-                    nuevo_btn = page.locator("text=Nuevo").first
-                    if not nuevo_btn.is_visible(timeout=2000):
-                        nuevo_btn = page.get_by_role("button", name="+ Nuevo")
-                    robust_click(page, nuevo_btn, timeout=5000)
-                    page.wait_for_load_state("networkidle")
+                    # Usar siempre el reset para asegurar un DOM limpio y evitar timeouts con inputs ocultos del registro anterior
+                    reset_to_clean_form(page)
                 except Exception as e:
                     # Si falla, no rompemos el guardado (que ya fue exitoso), dejamos que el script haga el reset
-                    print(f"Aviso: No se pudo hacer clic en '+ Nuevo' para el siguiente registro. Se forzará recarga. ({e})")
+                    logging.warning(f"No se pudo hacer clic en '+ Nuevo' para el siguiente registro. Se forzará recarga. ({e})")
                     reset_to_clean_form(page)
 
-            print(f"RESULTADO | FILA: {index+1} | ESTADO: OK | SKU: {row['SKU']}")
+            logging.info(f"RESULTADO | FILA: {index+1}/{len(df)} | SKU: {val_sku_mostrar} | ESTADO: OK")
             sys.stdout.flush()
         except Exception as e:
             err_str = str(e).lower()
@@ -854,25 +863,25 @@ def run(playwright: Playwright) -> None:
             if is_sku_existente:
                 motivo_err = "El SKU ya existe en el sistema."
             elif is_timeout:
-                motivo_err = "Time Out: Un campo posiblemente está mal escrito o no se encontró la opción requerida."
+                motivo_err = f"Time Out: Un campo posiblemente está mal escrito o no se encontró la opción requerida. Detalles: {str(e).strip()}"
             else:
                 motivo_err = str(e).strip()
                 if motivo_err == "Alerta del sistema:":
                     motivo_err = "Alerta del sistema bloqueó el guardado (revisa campos obligatorios)."
                 
-            print(f"RESULTADO | FILA: {index+1} | ESTADO: ERROR | SKU: {row['SKU']} | MOTIVO: {motivo_err}")
+            logging.error(f"RESULTADO | FILA: {index+1} | ESTADO: ERROR | SKU: {val_sku_mostrar} | MOTIVO: {motivo_err}")
             sys.stdout.flush()
             
             if "target page, context or browser has been closed" in err_str:
-                break
+                raise Exception("Navegador o página cerrados inesperadamente.")
             # Si es un error recuperable o no es el último registro, intentamos restablecer la interfaz para el siguiente
             if is_sku_existente or is_timeout or index < len(df) - 1:
                 try:
                     reset_to_clean_form(page)
                 except Exception as reset_err:
-                    print(f"Error crítico de recuperación: {reset_err}", file=sys.stderr)
+                    logging.error(f"Error crítico de recuperación: {reset_err}")
                     sys.stderr.flush()
-                    break
+                    raise Exception("No se pudo recuperar el navegador tras un error.")
 
     # ---------------------
     try:
@@ -882,13 +891,19 @@ def run(playwright: Playwright) -> None:
         pass
 
 
-print(f"Total de SKUs a subir (cantidad de filas): {len(df)}")
+logging.info(f"Total de SKUs a subir (cantidad de filas): {len(df)}")
+estimado_minutos = math.ceil((len(df) * 23) / 60)
+logging.info(f"Tiempo estimado de procesamiento: {estimado_minutos} minutos (aprox. 23 seg por fila)")
 
 with sync_playwright() as playwright:
     start_time = time.time()
     try:
         run(playwright)
     except Exception as e:
-        print(f"Error crítico en la ejecución de Playwright: {e}", file=sys.stderr)
+        logging.error(f"Error crítico en la ejecución de Playwright: {e}")
         sys.exit(1)
-    print(f"--- Tiempo total de ejecución: {time.time() - start_time:.2f} segundos ---")
+    
+    tiempo_total_seg = time.time() - start_time
+    minutos = int(tiempo_total_seg // 60)
+    segundos = int(tiempo_total_seg % 60)
+    logging.info(f"--- Proceso finalizado. Tiempo total: {minutos} minutos con {segundos} segundos ---")

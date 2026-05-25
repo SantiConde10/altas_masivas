@@ -93,7 +93,9 @@ ipcMain.handle('validate-csv-file', (event, filePath) => {
 
     pythonProcess.on('close', (exitCode) => {
       if (exitCode === 0 && output.includes('OK')) {
-        resolve({ valid: true });
+        const parts = output.trim().split('|');
+        const estTime = parts.length > 1 ? parts[1] : '';
+        resolve({ valid: true, estimatedTime: estTime });
       } else {
         const lines = output.split('\\n').concat(errorOutput.split('\\n'))
           .map(l => l.trim())

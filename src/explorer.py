@@ -3,6 +3,9 @@ import time
 import os
 from playwright.sync_api import Playwright, sync_playwright, expect
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 load_dotenv("secrets/.env")
 
@@ -34,7 +37,7 @@ def run(playwright: Playwright) -> None:
 
     proveedores = page.locator(".list-group.py-1").locator("button").all_inner_texts()
 
-    print(proveedores)
+    logging.info(proveedores)
 
     # –– Obtener HTML –––––––––––––––––––––––––––––––––––
 
@@ -50,4 +53,4 @@ def run(playwright: Playwright) -> None:
 with sync_playwright() as playwright:
     start_time = time.time()
     run(playwright)
-    print(f"--- Tiempo total de ejecución: {time.time() - start_time:.2f} segundos ---")
+    logging.info(f"--- Tiempo total de ejecución: {time.time() - start_time:.2f} segundos ---")

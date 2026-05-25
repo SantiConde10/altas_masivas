@@ -1,15 +1,24 @@
 import sys
 import os
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
 # Aseguramos que el directorio actual esté en sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def validate_csv(file_path):
+    # Silenciamos los logs informativos para no ensuciar el stdout 
+    # ya que la app de Electron espera un string exacto ("OK")
+    logging.getLogger().setLevel(logging.ERROR)
     from lectura_csv import transformar_df
     try:
         df = transformar_df(file_path)
         if df is not None and len(df) > 0:
-            print("OK")
+            import math
+            estimado_minutos = math.ceil((len(df) * 23) / 60)
+            print(f"OK|{estimado_minutos}")
             sys.exit(0)
         else:
             print("Error: El archivo no contiene datos validos o fallo la transformacion.")
@@ -30,7 +39,7 @@ def run_script(file_path):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("Uso: cli.py [validate|run] [archivo_csv]")
+        logging.error("Uso: cli.py [validate|run] [archivo_csv]")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -41,5 +50,5 @@ if __name__ == '__main__':
     elif command == 'run':
         run_script(csv_file)
     else:
-        print(f"Comando desconocido: {command}")
+        logging.error(f"Comando desconocido: {command}")
         sys.exit(1)

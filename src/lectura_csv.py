@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import glob
+import logging
 
 def transformar_df(custom_path=None):
 
@@ -14,16 +15,16 @@ def transformar_df(custom_path=None):
         else:
             csv_files = list(data_dir.glob("*.csv"))
             if not csv_files:
-                print(f"Error: No se encontró ningún archivo .csv en la ruta {data_dir}")
+                logging.error(f"No se encontró ningún archivo .csv en la ruta {data_dir}")
                 return None
             
             # Usamos el primer CSV encontrado
             archivo_path = csv_files[0]
             
-        print(f"Leyendo archivo de datos: {archivo_path.name}")
+        logging.info(f"Leyendo archivo de datos: {archivo_path.name}")
         df = pd.read_csv(archivo_path, skiprows=2, keep_default_na=False)
     except Exception as e:
-        print(f"Error inesperado al leer el archivo CSV: {e}")
+        logging.error(f"Error inesperado al leer el archivo CSV: {e}")
         return None
 
     # 2. Transformación de columnas y creación de Grupo
@@ -43,10 +44,10 @@ def transformar_df(custom_path=None):
         df['Grupo'] = df['SKU'].replace('', None).ffill()
         df['PESO VOLUMÉTRICO'] = df.apply(calcular_peso_volumetrico, axis=1)
     except KeyError as e:
-        print(f"Error: Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
+        logging.error(f"Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
         return None
     except Exception as e:
-        print(f"Error durante la transformación de columnas: {e}")
+        logging.error(f"Error durante la transformación de columnas: {e}")
         return None
 
     def consolidar_jsons(subset):
@@ -74,12 +75,12 @@ def transformar_df(custom_path=None):
             
         df_final = df.fillna('')
     except Exception as e:
-        print(f"Error al agrupar los datos: {e}")
+        logging.error(f"Error al agrupar los datos: {e}")
         return None
 
     try:
-        print("Se cargaran", df_final.shape[0], "proveedores")
+        logging.info(f"Se cargaran {df_final.shape[0]} proveedores")
     except Exception as e:
-        print(f"Error al procesar el resultado final: {e}")
+        logging.error(f"Error al procesar el resultado final: {e}")
 
     return df_final

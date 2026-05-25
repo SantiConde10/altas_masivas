@@ -175,7 +175,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = await window.electronAPI.validateCSVFile(filePath);
       if (result.valid) {
         if (runBtn) runBtn.disabled = false;
-        setStatus('success', 'Listo, puedes empezar');
+        const estText = result.estimatedTime ? ` (~${result.estimatedTime} min)` : '';
+        setStatus('success', `Listo, puedes empezar${estText}`);
       } else {
         selectedFilePath = null;
         if (fileInput) fileInput.value = '';
