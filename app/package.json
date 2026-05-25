@@ -19,7 +19,7 @@
   },
   "build": {
     "appId": "com.gaia.altamasiva",
-    "productName": "GAIA Altas Masivas",
+    "productName": "GAIA Automatizaciones",
     "directories": {
       "output": "dist"
     },
