@@ -2,25 +2,60 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
+  check_version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed to fetch tags
+      - id: check
+        working-directory: ./app
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist. We should release!"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+  create_tag:
+    needs: check_version
+    if: needs.check_version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create and Push Git Tag
+        run: |
+          git tag ${{ needs.check_version.outputs.version }}
+          git push origin ${{ needs.check_version.outputs.version }}
 
-    runs-on: ${{ matrix.os }}
-
+  build:
+    needs: [check_version, create_tag]
+    if: needs.check_version.outputs.should_release == 'true'
+    permissions:
+      contents: write
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check_version.outputs.version }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -49,14 +84,8 @@ jobs:
           echo "URL=$APP_URL" >> .env
 
           # Activamos entorno virtual y empaquetamos
-          # Usamos bash en ambos OS (Windows runner soporta bash)
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            source .venv/Scripts/activate
-            pyinstaller --onefile --add-data ".env;." src/cli.py
-          else
-            source .venv/bin/activate
-            pyinstaller --onefile --add-data ".env:." src/cli.py
-          fi
+          source .venv/bin/activate
+          pyinstaller --onefile --add-data ".env:." src/cli.py
         shell: bash
 
       - name: Setup Node.js
@@ -72,10 +101,5 @@ jobs:
         working-directory: ./app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            npm run build:win -- -p always
-          else
-            npm run build:mac -- -p always
-          fi
+        run: npm run build:mac -- -p always
         shell: bash
