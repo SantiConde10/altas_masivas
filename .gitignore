@@ -11,3 +11,4 @@ wheels/
 node_modules/
 
 secrets/
+make_release.md
