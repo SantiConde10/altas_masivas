@@ -1,6 +1,6 @@
 {
   "name": "gaia-alta-masiva",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Aplicación de escritorio para la carga masiva de artículos en GAIA",
   "main": "main.js",
   "scripts": {
@@ -42,7 +42,8 @@
       {
         "provider": "github",
         "owner": "SantiConde10",
-        "repo": "altas_masivas"
+        "repo": "altas_masivas",
+        "releaseType": "release"
       }
     ]
   }
