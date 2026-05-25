@@ -689,6 +689,72 @@ def run(playwright: Playwright) -> None:
                     # Si recibimos un error de red, lo lanzamos para que se muestre en el UI
                     raise Exception(f"Respuesta del servidor ({status}): {backend_msg}")
 
+            # Buscar campos faltantes SIEMPRE
+            faltantes = page.evaluate("""() => {
+                const emptyFields = [];
+                
+                // 1. Buscar elementos marcados visualmente con error
+                document.querySelectorAll('.dx-invalid, .has-error, .is-invalid, .ng-invalid.ng-touched').forEach(el => {
+                    // Ignorar si el elemento no está visible
+                    if (el.offsetParent === null && window.getComputedStyle(el).display === 'none') return;
+                    
+                    let name = null;
+                    const label = el.closest('.form-group, .dx-field, div')?.querySelector('label');
+                    if (label) name = label.innerText.replace(/[*:]/g, '').trim();
+                    if (!name && el.placeholder) name = el.placeholder;
+                    
+                    if (!name) {
+                        const td = el.closest('td');
+                        if (td) {
+                            const th = td.cellIndex;
+                            const grid = el.closest('table');
+                            if (grid && th !== undefined) {
+                                const header = grid.querySelectorAll('th')[th];
+                                if (header) name = header.innerText.trim();
+                            }
+                        }
+                    }
+                    if (name && !emptyFields.includes(name)) emptyFields.push(name);
+                });
+
+                // 2. Buscar campos con etiqueta obligatoria (*) que estén vacíos y visibles
+                document.querySelectorAll('label').forEach(label => {
+                    if (label.innerText.includes('*') && label.offsetParent !== null) {
+                        let name = label.innerText.replace(/[*:]/g, '').trim();
+                        let el = null;
+                        
+                        if (label.htmlFor) {
+                            el = document.getElementById(label.htmlFor);
+                        } else {
+                            const container = label.closest('.form-group, .dx-field, div.row, div');
+                            if (container) el = container.querySelector('input:not([type="hidden"]), select, textarea, .dx-texteditor-input');
+                        }
+                        
+                        if (!el) {
+                            let next = label.nextElementSibling;
+                            if (next && (next.tagName === 'INPUT' || next.querySelector('input, .dx-texteditor-input'))) {
+                                el = next.tagName === 'INPUT' ? next : next.querySelector('input, .dx-texteditor-input');
+                            }
+                        }
+                        
+                        if (el && el.offsetParent !== null) {
+                            let isEmpty = false;
+                            if (el.type === 'checkbox' || el.type === 'radio') isEmpty = !el.checked;
+                            else if (!el.value || el.value.trim() === '') isEmpty = true;
+                            
+                            if (isEmpty && name && !emptyFields.includes(name)) emptyFields.push(name);
+                        }
+                        
+                        // Para componentes complejos de DevExpress sin input nativo directo
+                        const dxContainer = label.closest('.dx-field, .form-group')?.querySelector('.dx-texteditor');
+                        if (dxContainer && dxContainer.offsetParent !== null && dxContainer.classList.contains('dx-texteditor-empty')) {
+                            if (name && !emptyFields.includes(name)) emptyFields.push(name);
+                        }
+                    }
+                });
+                return emptyFields.length > 0 ? emptyFields.join(', ') : null;
+            }""")
+            
             # Validar mensajes de error visibles en la página tras guardar
             error_msg = None
             error_locators = [
@@ -713,7 +779,11 @@ def run(playwright: Playwright) -> None:
                         if el.is_visible():
                             txt = el.inner_text().strip()
                             if txt:
-                                error_msg = f"Formulario: {txt}"
+                                txt_lower = txt.lower()
+                                # Asegurar ignorar éxitos ("El articulo se guardo exitosamente")
+                                if any(k in txt_lower for k in ["éxito", "exito", "exitosamente", "success"]):
+                                    continue
+                                error_msg = txt
                                 break
                 except:
                     pass
@@ -721,92 +791,58 @@ def run(playwright: Playwright) -> None:
                     break
 
             # Verificar si se disparó alguna alerta nativa
+            alert_text = ""
             if hasattr(page, 'dialog_messages') and page.dialog_messages:
                 alert_text = " | ".join(filter(None, page.dialog_messages))
                 page.dialog_messages.clear()
                 
-                if not alert_text.strip():
-                    faltantes = page.evaluate("""() => {
-                        const emptyFields = [];
-                        
-                        // 1. Buscar elementos marcados visualmente con error (DevExpress, Bootstrap, etc.)
-                        document.querySelectorAll('.dx-invalid, .has-error, .is-invalid, .ng-invalid.ng-touched').forEach(el => {
-                            let name = null;
-                            const label = el.closest('.form-group, .dx-field, div')?.querySelector('label');
-                            if (label) name = label.innerText.replace(/[*:]/g, '').trim();
-                            if (!name && el.placeholder) name = el.placeholder;
-                            if (name && !emptyFields.includes(name)) emptyFields.push(name);
-                        });
+                alert_lower = alert_text.lower()
+                if any(k in alert_lower for k in ["éxito", "exito", "exitosamente", "success"]):
+                    alert_text = ""
 
-                        // 2. Buscar campos con etiqueta obligatoria (*) que estén vacíos
-                        document.querySelectorAll('label').forEach(label => {
-                            if (label.innerText.includes('*')) {
-                                let name = label.innerText.replace(/[*:]/g, '').trim();
-                                let el = null;
-                                
-                                if (label.htmlFor) {
-                                    el = document.getElementById(label.htmlFor);
-                                } else {
-                                    const container = label.closest('.form-group, .dx-field, div.row, div');
-                                    if (container) el = container.querySelector('input:not([type="hidden"]), select, textarea, .dx-texteditor-input');
-                                }
-                                
-                                if (!el) {
-                                    let next = label.nextElementSibling;
-                                    if (next && (next.tagName === 'INPUT' || next.querySelector('input, .dx-texteditor-input'))) {
-                                        el = next.tagName === 'INPUT' ? next : next.querySelector('input, .dx-texteditor-input');
-                                    }
-                                }
-                                
-                                if (el) {
-                                    let isEmpty = false;
-                                    if (el.type === 'checkbox' || el.type === 'radio') isEmpty = !el.checked;
-                                    else if (!el.value || el.value.trim() === '') isEmpty = true;
-                                    
-                                    if (isEmpty && name && !emptyFields.includes(name)) emptyFields.push(name);
-                                }
-                                
-                                // Para componentes complejos de DevExpress sin input nativo directo
-                                const dxContainer = label.closest('.dx-field, .form-group')?.querySelector('.dx-texteditor');
-                                if (dxContainer && dxContainer.classList.contains('dx-texteditor-empty')) {
-                                    if (name && !emptyFields.includes(name)) emptyFields.push(name);
-                                }
-                            }
-                        });
-                        return emptyFields.length > 0 ? emptyFields.join(', ') : null;
-                    }""")
-                    
-                    if faltantes:
-                        alert_text = f"Faltan campos obligatorios o son inválidos: {faltantes}"
-                    else:
-                        alert_text = "Falta información o hay un campo inválido (el sistema no especificó cuál)."
-                        
-                if any(k in alert_text.lower() for k in ["ya existe", "duplicado", "existe", "registrado"]):
-                    raise Exception(f"SKU_EXISTENTE: Alerta del sistema -> {alert_text}")
-                error_msg = f"Alerta del sistema: {alert_text}"
-
-            # Verificar por texto en la página general si no hay error_msg
-            if not error_msg:
+            # Verificar por texto en la página general si no encontramos nada más
+            if not error_msg and not alert_text and not faltantes:
                 try:
                     page_text_loc = page.locator("text=/ya existe|duplicado|ya registrado/i")
                     if page_text_loc.count() > 0 and page_text_loc.first.is_visible():
-                        error_msg = f"Formulario: {page_text_loc.first.inner_text().strip()}"
+                        txt = page_text_loc.first.inner_text().strip()
+                        txt_lower = txt.lower()
+                        if not any(k in txt_lower for k in ["éxito", "exito", "exitosamente", "success"]):
+                            error_msg = txt
                 except:
                     pass
 
-            if error_msg:
-                if any(k in error_msg.lower() for k in ["ya existe", "duplicado", "existe", "registrado"]):
-                    raise Exception(f"SKU_EXISTENTE: {error_msg}")
-                raise Exception(error_msg)
+            # Decidir el tipo de error y culpar a quien corresponda (Blaming)
+            combined_errors = f"{error_msg or ''} {alert_text}".lower()
+            
+            # Prioridad 1: SKU Duplicado (Error de datos del usuario, SKU ya existe)
+            if any(k in combined_errors for k in ["ya existe", "duplicado", "existe", "registrado"]):
+                raise Exception(f"SKU_EXISTENTE: El artículo ya está registrado en GAIA. (Mensaje del sistema: {error_msg or alert_text})")
+                
+            # Prioridad 2: Tenemos campos faltantes identificados, la culpa es del USUARIO
+            if faltantes:
+                if error_msg or alert_text:
+                    raise Exception(f"Error en tu archivo Excel: Te faltó llenar o es inválido el campo obligatorio: '{faltantes}'. (GAIA devolvió: {error_msg or alert_text})")
+                else:
+                    raise Exception(f"Error en tu archivo Excel: Dejaste vacío el campo obligatorio: '{faltantes}'. Corrígelo en tu base de datos antes de subirlo.")
+                
+            # Prioridad 3: Hay un error en pantalla pero NO nos faltaron campos obligatorios. Es culpa del sistema o un dato inconsistente complejo
+            if error_msg or alert_text:
+                detalles = " | ".join(filter(None, [error_msg, alert_text]))
+                raise Exception(f"Error de la Plataforma GAIA: El sistema rechazó el guardado por una validación interna. Mensaje exacto de GAIA: '{detalles}'.")
 
             # Cargar siguiente formulario si restan registros
             if index < len(df) - 1:
                 try:
-                    nuevo_btn = page.get_by_role("button", name="+ Nuevo")
+                    nuevo_btn = page.locator("text=Nuevo").first
+                    if not nuevo_btn.is_visible(timeout=2000):
+                        nuevo_btn = page.get_by_role("button", name="+ Nuevo")
                     robust_click(page, nuevo_btn, timeout=5000)
                     page.wait_for_load_state("networkidle")
                 except Exception as e:
-                    raise Exception(f"No se pudo crear el siguiente formulario vacío con '+ Nuevo': {e}")
+                    # Si falla, no rompemos el guardado (que ya fue exitoso), dejamos que el script haga el reset
+                    print(f"Aviso: No se pudo hacer clic en '+ Nuevo' para el siguiente registro. Se forzará recarga. ({e})")
+                    reset_to_clean_form(page)
 
             print(f"RESULTADO | FILA: {index+1} | ESTADO: OK | SKU: {row['SKU']}")
             sys.stdout.flush()
