@@ -1,0 +1,99 @@
+<header class="view-header">
+  <h1>Reportes</h1>
+  <p class="subtitle">Historial de ejecuciones de Alta Masiva con detalle de resultados por SKU.</p>
+</header>
+
+<div class="rp-container">
+
+  <!-- Stats summary row -->
+  <div class="rp-stats-row" id="rp-stats-row">
+    <div class="rp-stat-card">
+      <span class="rp-stat-num" id="rp-stat-runs">0</span>
+      <span class="rp-stat-label">Ejecuciones</span>
+    </div>
+    <div class="rp-stat-card">
+      <span class="rp-stat-num" id="rp-stat-total">0</span>
+      <span class="rp-stat-label">SKUs procesados</span>
+    </div>
+    <div class="rp-stat-card rp-stat-success">
+      <span class="rp-stat-num" id="rp-stat-success">0</span>
+      <span class="rp-stat-label">Subidos con éxito</span>
+    </div>
+    <div class="rp-stat-card rp-stat-error">
+      <span class="rp-stat-num" id="rp-stat-errors">0</span>
+      <span class="rp-stat-label">Con errores</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="rp-toolbar">
+    <input type="text" id="rp-search" class="rp-search" placeholder="Buscar por nombre de archivo...">
+    <select id="rp-filter-status" class="rp-select">
+      <option value="">Todos los estados</option>
+      <option value="success">Completado</option>
+      <option value="partial">Parcial</option>
+      <option value="error">Con errores</option>
+    </select>
+    <button id="rp-clear-all" class="rp-clear-btn" title="Borrar todo el historial">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <polyline points="3 4 13 4"/><path d="M5 4V2h6v2M4 4l1 10h6l1-10"/>
+      </svg>
+      Limpiar historial
+    </button>
+  </div>
+
+  <!-- Reports list -->
+  <div class="rp-list" id="rp-list">
+    <div class="rp-empty" id="rp-empty">
+      <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+      </svg>
+      <p>No hay reportes todavía.</p>
+      <p class="rp-empty-sub">Los reportes se generan automáticamente al finalizar una ejecución de Alta Masiva.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="rp-modal-overlay" id="rp-modal-overlay">
+  <div class="rp-modal">
+    <div class="rp-modal-header">
+      <div>
+        <h2 class="rp-modal-title" id="rp-modal-title">Detalle de ejecución</h2>
+        <span class="rp-modal-meta" id="rp-modal-meta"></span>
+      </div>
+      <button class="rp-modal-close" id="rp-modal-close">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="rp-modal-stats" id="rp-modal-stats"></div>
+
+    <div class="rp-modal-filters">
+      <input type="text" id="rp-detail-search" class="rp-search" placeholder="Buscar SKU...">
+      <select id="rp-detail-filter" class="rp-select">
+        <option value="">Todos</option>
+        <option value="éxito">Éxito</option>
+        <option value="existente">Ya existía</option>
+        <option value="fallo">Fallo</option>
+      </select>
+    </div>
+
+    <div class="rp-modal-table-wrap">
+      <table class="rp-detail-table">
+        <thead>
+          <tr>
+            <th>Estatus</th>
+            <th>SKU</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="rp-detail-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
