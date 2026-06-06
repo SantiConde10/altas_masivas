@@ -1,0 +1,204 @@
+<div class="gt-panel">
+
+  <!-- Tab bar -->
+  <div class="gt-tabbar">
+    <button class="gt-tab active" data-tab="hoy">Hoy</button>
+    <button class="gt-tab" data-tab="lista">Tareas</button>
+    <button class="gt-tab" data-tab="calendario">Calendario</button>
+    <div class="gt-tabbar-spacer"></div>
+    <button class="gt-cmd-btn" id="gt-cmd-btn" title="Atajo rápido /">/</button>
+    <button class="btn btn-primary gt-btn-new" id="gt-new-task">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+      </svg>
+      Nueva tarea
+    </button>
+  </div>
+
+  <!-- ── Tab: Hoy ──────────────────────────────────────────── -->
+  <div class="gt-tab-content active" id="gt-tab-hoy">
+    <div class="gt-hoy-header">
+      <div>
+        <h2 class="gt-hoy-greeting" id="gt-greeting">Buenos días</h2>
+        <p class="gt-hoy-date" id="gt-date"></p>
+      </div>
+    </div>
+    <div class="gt-hoy-grid">
+      <div class="gt-card">
+        <div class="gt-card-title">ENFOQUE DE HOY</div>
+        <div id="gt-today-list" class="gt-today-list"></div>
+      </div>
+      <div class="gt-card">
+        <div class="gt-card-title">ESTA SEMANA</div>
+        <div id="gt-weekly" class="gt-weekly"></div>
+      </div>
+    </div>
+    <div class="gt-section-label">PROYECTOS</div>
+    <div id="gt-projects" class="gt-projects"></div>
+  </div>
+
+  <!-- ── Tab: Lista/Kanban ─────────────────────────────────── -->
+  <div class="gt-tab-content" id="gt-tab-lista">
+    <div class="gt-toolbar">
+      <div class="gt-search-wrap">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="gt-search-icon">
+          <circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>
+        </svg>
+        <input type="search" id="gt-search" class="gt-search" placeholder="Buscar tareas...">
+      </div>
+      <select id="gt-filter-project" class="gt-select"></select>
+      <select id="gt-filter-status" class="gt-select">
+        <option value="">Todos los estados</option>
+        <option value="todo">Por hacer</option>
+        <option value="in-progress">En progreso</option>
+        <option value="done">Hecho</option>
+      </select>
+      <div class="gt-view-toggle">
+        <button id="gt-btn-list" class="gt-toggle active">Lista</button>
+        <button id="gt-btn-kanban" class="gt-toggle">Kanban</button>
+      </div>
+    </div>
+
+    <div id="gt-list-view" class="gt-list-view">
+      <table class="gt-table">
+        <thead>
+          <tr>
+            <th style="width:110px">Estado</th>
+            <th>Tarea</th>
+            <th style="width:110px">Proyecto</th>
+            <th style="width:85px">Prioridad</th>
+            <th style="width:115px">Fecha</th>
+            <th style="width:60px">Dur.</th>
+          </tr>
+        </thead>
+        <tbody id="gt-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="gt-kanban-view" class="gt-kanban-view gt-hidden">
+      <div class="gt-kanban-col" id="gt-col-todo" data-status="todo">
+        <div class="gt-col-header"><span class="gt-col-dot" style="background:#94a3b8"></span>Por hacer</div>
+        <div class="gt-col-body"></div>
+        <button class="gt-col-add" data-status="todo">+ Nueva tarea</button>
+      </div>
+      <div class="gt-kanban-col" id="gt-col-in-progress" data-status="in-progress">
+        <div class="gt-col-header"><span class="gt-col-dot" style="background:#3b82f6"></span>En progreso</div>
+        <div class="gt-col-body"></div>
+        <button class="gt-col-add" data-status="in-progress">+ Nueva tarea</button>
+      </div>
+      <div class="gt-kanban-col" id="gt-col-done" data-status="done">
+        <div class="gt-col-header"><span class="gt-col-dot" style="background:#10b981"></span>Hecho</div>
+        <div class="gt-col-body"></div>
+        <button class="gt-col-add" data-status="done">+ Nueva tarea</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Calendario ───────────────────────────────────── -->
+  <div class="gt-tab-content" id="gt-tab-calendario">
+    <div class="gt-cal-toolbar">
+      <button class="gt-cal-nav" id="gt-cal-prev">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="10 3 5 8 10 13"/></svg>
+      </button>
+      <span id="gt-cal-label" class="gt-cal-label"></span>
+      <button class="gt-cal-nav" id="gt-cal-next">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="6 3 11 8 6 13"/></svg>
+      </button>
+      <button class="btn btn-secondary gt-cal-today" id="gt-cal-today">Hoy</button>
+    </div>
+    <div class="gt-cal-wrap">
+      <div id="gt-cal-headers" class="gt-cal-headers"></div>
+      <div id="gt-cal-allday" class="gt-cal-allday"></div>
+      <div class="gt-cal-scroll">
+        <div id="gt-cal-slots" class="gt-cal-slots"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal ─────────────────────────────────────────────── -->
+  <div id="gt-modal-overlay" class="gt-modal-overlay">
+    <div class="gt-modal">
+      <div class="gt-modal-head">
+        <span id="gt-modal-heading">Nueva tarea</span>
+        <button class="gt-modal-close" id="gt-modal-close">&times;</button>
+      </div>
+      <div class="gt-modal-body">
+        <input type="text" id="gt-title" class="gt-input gt-title-input" placeholder="Título de la tarea...">
+        <div class="gt-row3">
+          <div class="gt-field">
+            <label class="gt-label">Proyecto</label>
+            <select id="gt-project" class="gt-select gt-select-sm"></select>
+          </div>
+          <div class="gt-field">
+            <label class="gt-label">Estado</label>
+            <select id="gt-status" class="gt-select gt-select-sm">
+              <option value="todo">Por hacer</option>
+              <option value="in-progress">En progreso</option>
+              <option value="done">Hecho</option>
+            </select>
+          </div>
+          <div class="gt-field">
+            <label class="gt-label">Prioridad</label>
+            <select id="gt-priority" class="gt-select gt-select-sm">
+              <option value="low">Baja</option>
+              <option value="medium" selected>Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div class="gt-row3">
+          <div class="gt-field">
+            <label class="gt-label">Fecha límite</label>
+            <input type="date" id="gt-due-date" class="gt-input gt-input-sm">
+          </div>
+          <div class="gt-field">
+            <label class="gt-label">Hora</label>
+            <input type="time" id="gt-due-time" class="gt-input gt-input-sm">
+          </div>
+          <div class="gt-field">
+            <label class="gt-label">Duración (min)</label>
+            <input type="number" id="gt-duration" class="gt-input gt-input-sm" min="5" max="480" step="5" value="30">
+          </div>
+        </div>
+        <div class="gt-field">
+          <label class="gt-label">Descripción</label>
+          <textarea id="gt-description" class="gt-textarea" rows="2" placeholder="Notas..."></textarea>
+        </div>
+        <div class="gt-field">
+          <div class="gt-subtasks-head">
+            <label class="gt-label">Subtareas</label>
+            <button type="button" class="gt-link-btn" id="gt-add-subtask">+ Agregar</button>
+          </div>
+          <div id="gt-subtasks-list" class="gt-subtasks-list"></div>
+        </div>
+      </div>
+      <div class="gt-modal-foot">
+        <button class="btn gt-btn-danger" id="gt-delete">Eliminar</button>
+        <div class="gt-foot-right">
+          <button class="btn btn-secondary" id="gt-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="gt-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Command Palette ───────────────────────────────────── -->
+  <div id="gt-cmd-overlay" class="gt-cmd-overlay">
+    <div class="gt-cmd-box">
+      <form id="gt-cmd-form">
+        <div class="gt-cmd-row">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#999;flex-shrink:0">
+            <circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+          <input type="text" id="gt-cmd-input" class="gt-cmd-input" placeholder="Nueva tarea... (@mañana, @lunes, @+2d)">
+        </div>
+      </form>
+      <div class="gt-cmd-hints">
+        <span><kbd>Enter</kbd> crear</span>
+        <span><kbd>Esc</kbd> cerrar</span>
+        <span class="gt-cmd-tip">@mañana · @lunes · @+3d · @hoy</span>
+      </div>
+    </div>
+  </div>
+
+</div>

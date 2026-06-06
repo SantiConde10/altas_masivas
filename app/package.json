@@ -14,8 +14,9 @@
     "electron-updater": "^6.1.8"
   },
   "devDependencies": {
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^41.7.1",
+    "electron-builder": "^26.8.1",
+    "playwright-core": "^1.60.0"
   },
   "build": {
     "appId": "com.gaia.altamasiva",
@@ -27,7 +28,9 @@
       {
         "from": "../dist",
         "to": "python_bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
