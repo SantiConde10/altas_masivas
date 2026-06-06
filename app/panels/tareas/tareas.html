@@ -2,9 +2,10 @@
 
   <!-- Tab bar -->
   <div class="gt-tabbar">
-    <button class="gt-tab active" data-tab="hoy">Hoy</button>
+    <button class="gt-tab active" data-tab="hoy">Dashboard</button>
     <button class="gt-tab" data-tab="lista">Tareas</button>
     <button class="gt-tab" data-tab="calendario">Calendario</button>
+    <button class="gt-tab" data-tab="etiquetas">Configuraciones</button>
     <div class="gt-tabbar-spacer"></div>
     <button class="gt-cmd-btn" id="gt-cmd-btn" title="Atajo rápido /">/</button>
     <button class="btn btn-primary gt-btn-new" id="gt-new-task">
@@ -15,26 +16,91 @@
     </button>
   </div>
 
-  <!-- ── Tab: Hoy ──────────────────────────────────────────── -->
+  <!-- ── Tab: Dashboard ──────────────────────────────────── -->
   <div class="gt-tab-content active" id="gt-tab-hoy">
-    <div class="gt-hoy-header">
-      <div>
-        <h2 class="gt-hoy-greeting" id="gt-greeting">Buenos días</h2>
-        <p class="gt-hoy-date" id="gt-date"></p>
+    <div class="db-wrap">
+
+      <!-- Header -->
+      <div class="db-header">
+        <div class="db-hd-left">
+          <span class="db-title">Dashboard</span>
+          <span class="db-date" id="gt-date"></span>
+        </div>
+        <span class="db-greeting" id="gt-greeting"></span>
+      </div>
+
+      <!-- Stats row -->
+      <div class="db-stats">
+        <div class="db-stat">
+          <div class="db-stat-main">
+            <span class="db-stat-num" id="db-done-num">0</span>
+            <span class="db-stat-denom" id="db-done-denom">/0</span>
+          </div>
+          <div class="db-stat-label">Completadas hoy</div>
+          <div class="db-stat-track"><div class="db-stat-fill" id="db-done-fill" style="width:0%"></div></div>
+        </div>
+        <div class="db-stat">
+          <div class="db-stat-main">
+            <span class="db-stat-num" id="db-week-num">0%</span>
+          </div>
+          <div class="db-stat-label">Esta semana</div>
+          <div class="db-stat-sub" id="db-week-sub">0 de 0 tareas</div>
+          <div class="db-stat-track"><div class="db-stat-fill db-fill-blue" id="db-week-fill" style="width:0%"></div></div>
+        </div>
+        <div class="db-stat">
+          <div class="db-stat-main">
+            <span class="db-stat-num db-num-amber" id="db-urgent-num">0</span>
+          </div>
+          <div class="db-stat-label">Alta prioridad</div>
+          <div class="db-stat-sub">pendientes</div>
+        </div>
+        <div class="db-stat">
+          <div class="db-stat-main">
+            <span class="db-stat-num db-num-red" id="db-overdue-num">0</span>
+          </div>
+          <div class="db-stat-label">Vencidas</div>
+          <div class="db-stat-sub">sin completar</div>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div class="db-main">
+
+        <!-- Left: Focus list -->
+        <div class="db-panel">
+          <div class="db-panel-head">
+            <span class="db-panel-label">ENFOQUE DE HOY</span>
+            <span class="db-panel-badge" id="db-focus-badge"></span>
+          </div>
+          <div id="gt-today-list" class="db-task-list"></div>
+          <button class="db-add-task-btn" id="db-add-today">
+            <svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+            </svg>
+            Agregar tarea de hoy
+          </button>
+        </div>
+
+        <!-- Right: Week + Upcoming + Projects -->
+        <div class="db-panel">
+          <div class="db-panel-head">
+            <span class="db-panel-label">ESTA SEMANA</span>
+            <span class="db-panel-badge" id="db-week-badge"></span>
+          </div>
+          <div id="gt-weekly" class="db-weekly-wrap"></div>
+          <div class="db-panel-head db-panel-head-sep">
+            <span class="db-panel-label">PRÓXIMOS EVENTOS</span>
+            <span class="db-panel-badge" id="db-upcoming-badge"></span>
+          </div>
+          <div id="db-upcoming" class="db-upcoming-list"></div>
+          <div class="db-panel-head db-panel-head-sep">
+            <span class="db-panel-label">PROYECTOS</span>
+          </div>
+          <div id="gt-projects" class="db-proj-list"></div>
+        </div>
+
       </div>
     </div>
-    <div class="gt-hoy-grid">
-      <div class="gt-card">
-        <div class="gt-card-title">ENFOQUE DE HOY</div>
-        <div id="gt-today-list" class="gt-today-list"></div>
-      </div>
-      <div class="gt-card">
-        <div class="gt-card-title">ESTA SEMANA</div>
-        <div id="gt-weekly" class="gt-weekly"></div>
-      </div>
-    </div>
-    <div class="gt-section-label">PROYECTOS</div>
-    <div id="gt-projects" class="gt-projects"></div>
   </div>
 
   <!-- ── Tab: Lista/Kanban ─────────────────────────────────── -->
@@ -47,6 +113,7 @@
         <input type="search" id="gt-search" class="gt-search" placeholder="Buscar tareas...">
       </div>
       <select id="gt-filter-project" class="gt-select"></select>
+      <select id="gt-filter-tag" class="gt-select"></select>
       <select id="gt-filter-status" class="gt-select">
         <option value="">Todos los estados</option>
         <option value="todo">Por hacer</option>
@@ -115,6 +182,65 @@
     </div>
   </div>
 
+  <!-- ── Tab: Configuraciones ─────────────────────────────── -->
+  <div class="gt-tab-content" id="gt-tab-etiquetas">
+    <div class="cfg-wrap">
+
+      <div class="cfg-header">
+        <h2 class="cfg-title">Configuraciones</h2>
+        <p class="cfg-sub">Personaliza proyectos, etiquetas y colores de prioridad</p>
+      </div>
+
+      <div class="cfg-grid">
+
+        <!-- Columna izquierda: Etiquetas -->
+        <div class="cfg-col">
+          <div class="cfg-section">
+            <div class="cfg-section-head">
+              <span class="cfg-section-label">ETIQUETAS</span>
+              <button class="cfg-add-btn" id="gt-new-tag">
+                <svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+                </svg>
+                Nueva
+              </button>
+            </div>
+            <div id="gt-tags-list" class="cfg-item-list"></div>
+            <div id="gt-tags-empty" class="cfg-empty-state" style="display:none">
+              <p>Sin etiquetas. Crea la primera para organizar tus tareas.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna derecha: Proyectos + Prioridades -->
+        <div class="cfg-col">
+
+          <div class="cfg-section">
+            <div class="cfg-section-head">
+              <span class="cfg-section-label">PROYECTOS</span>
+              <button class="cfg-add-btn" id="cfg-new-project">
+                <svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+                </svg>
+                Nuevo
+              </button>
+            </div>
+            <div id="cfg-projects-list" class="cfg-item-list"></div>
+          </div>
+
+          <div class="cfg-section">
+            <div class="cfg-section-head">
+              <span class="cfg-section-label">PRIORIDADES</span>
+              <span class="cfg-section-hint">Color de los badges</span>
+            </div>
+            <div id="cfg-prio-list" class="cfg-prio-list"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Modal ─────────────────────────────────────────────── -->
   <div id="gt-modal-overlay" class="gt-modal-overlay">
     <div class="gt-modal">
@@ -140,9 +266,11 @@
           <div class="gt-field">
             <label class="gt-label">Prioridad</label>
             <select id="gt-priority" class="gt-select gt-select-sm">
-              <option value="low">Baja</option>
-              <option value="medium" selected>Media</option>
+              <option value="critical">Crítica</option>
               <option value="high">Alta</option>
+              <option value="medium" selected>Media</option>
+              <option value="low">Baja</option>
+              <option value="minimal">Mínima</option>
             </select>
           </div>
         </div>
@@ -159,6 +287,33 @@
             <label class="gt-label">Duración (min)</label>
             <input type="number" id="gt-duration" class="gt-input gt-input-sm" min="5" max="480" step="5" value="30">
           </div>
+        </div>
+        <!-- Recurrence -->
+        <div class="gt-field">
+          <label class="gt-label">Repetición</label>
+          <div class="gt-rec-row">
+            <select id="gt-rec-type" class="gt-select gt-select-sm gt-rec-select">
+              <option value="none">No repetir</option>
+              <option value="daily">Diario</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="yearly">Anual</option>
+            </select>
+            <div id="gt-rec-interval-wrap" class="gt-rec-interval-wrap" style="display:none">
+              <span class="gt-rec-sep">cada</span>
+              <input type="number" id="gt-rec-interval" class="gt-input gt-input-sm gt-rec-num" min="1" max="99" value="1">
+              <span class="gt-rec-unit" id="gt-rec-unit"></span>
+            </div>
+          </div>
+          <div id="gt-rec-end-wrap" style="display:none" class="gt-rec-end-wrap">
+            <label class="gt-label" style="margin-top:0.4rem">Termina el (opcional)</label>
+            <input type="date" id="gt-rec-end" class="gt-input gt-input-sm">
+          </div>
+        </div>
+        <!-- Tags -->
+        <div class="gt-field">
+          <label class="gt-label">Etiquetas</label>
+          <div id="gt-modal-tags-picker" class="gt-modal-tags-picker"></div>
         </div>
         <div class="gt-field">
           <label class="gt-label">Descripción</label>
@@ -177,6 +332,39 @@
         <div class="gt-foot-right">
           <button class="btn btn-secondary" id="gt-cancel">Cancelar</button>
           <button class="btn btn-primary" id="gt-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tag Editor Modal ─────────────────────────────────── -->
+  <div id="gt-tag-modal-overlay" class="gt-modal-overlay">
+    <div class="gt-modal gt-tag-modal">
+      <div class="gt-modal-head">
+        <span id="gt-tag-modal-heading">Nueva etiqueta</span>
+        <button class="gt-modal-close" id="gt-tag-modal-close">&times;</button>
+      </div>
+      <div class="gt-modal-body">
+        <div class="gt-tag-editor-row">
+          <div class="gt-field" style="flex:1">
+            <label class="gt-label">Nombre</label>
+            <input type="text" id="gt-tag-name" class="gt-input" placeholder="Ej: Hot Sale, Expo, Campaña...">
+          </div>
+          <div class="gt-field">
+            <label class="gt-label">Color</label>
+            <input type="color" id="gt-tag-color" class="gt-color-input" value="#3b82f6">
+          </div>
+        </div>
+        <div class="gt-field">
+          <label class="gt-label">Vista previa</label>
+          <div id="gt-tag-preview" class="gt-tag-preview-wrap"></div>
+        </div>
+      </div>
+      <div class="gt-modal-foot">
+        <button class="btn gt-btn-danger" id="gt-tag-delete" style="display:none">Eliminar</button>
+        <div class="gt-foot-right">
+          <button class="btn btn-secondary" id="gt-tag-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="gt-tag-save">Guardar</button>
         </div>
       </div>
     </div>

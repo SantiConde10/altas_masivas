@@ -578,11 +578,14 @@ const GT = {
   saveTasks(t){ localStorage.setItem('gt_tasks',JSON.stringify(t)); },
   projects() { return JSON.parse(localStorage.getItem('gt_projects')||'[]'); },
   saveProjects(p){ localStorage.setItem('gt_projects',JSON.stringify(p)); },
+  tags()     { return JSON.parse(localStorage.getItem('gt_tags')||'[]'); },
+  saveTags(t){ localStorage.setItem('gt_tags',JSON.stringify(t)); },
 
   addTask(data) {
     const list = this.tasks();
     const t = { id:gtId(), title:'', description:'', projectId:'', status:'todo',
       priority:'medium', dueDate:null, dueTime:null, duration:30, subtasks:[],
+      tags:[], recurrence:{type:'none',interval:1,endDate:null},
       createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), ...data };
     list.push(t); this.saveTasks(list); return t;
   },
@@ -595,7 +598,6 @@ const GT = {
   },
 
   removeTask(id) { this.saveTasks(this.tasks().filter(t=>t.id!==id)); },
-
   getTask(id)    { return this.tasks().find(t=>t.id===id)||null; },
 
   addProject(data) {
@@ -603,33 +605,87 @@ const GT = {
     const p = { id:gtId(), name:'', color:'#1a1a1a', createdAt:new Date().toISOString(), ...data };
     list.push(p); this.saveProjects(list); return p;
   },
-
+  editProject(id, data) {
+    const list=this.projects(), i=list.findIndex(p=>p.id===id);
+    if(i<0) return null;
+    list[i]={...list[i],...data}; this.saveProjects(list); return list[i];
+  },
+  removeProject(id) {
+    this.saveProjects(this.projects().filter(p=>p.id!==id));
+    this.saveTasks(this.tasks().map(t=>t.projectId===id?{...t,projectId:''}:t));
+  },
   getProject(id) { return this.projects().find(p=>p.id===id)||null; },
 
+  prioColors() {
+    return JSON.parse(localStorage.getItem('gt_prio_colors')||'null')
+           || {critical:'#b91c1c', high:'#dc2626', medium:'#d97706', low:'#16a34a', minimal:'#60a5fa'};
+  },
+  savePrioColors(c) { localStorage.setItem('gt_prio_colors',JSON.stringify(c)); },
+
+  addTag(data) {
+    const list = this.tags();
+    const tag = { id:gtId(), name:'', color:'#3b82f6', ...data };
+    list.push(tag); this.saveTags(list); return tag;
+  },
+  editTag(id, data) {
+    const list = this.tags(), i = list.findIndex(t=>t.id===id);
+    if (i<0) return null;
+    list[i] = {...list[i], ...data};
+    this.saveTags(list); return list[i];
+  },
+  removeTag(id) {
+    this.saveTags(this.tags().filter(t=>t.id!==id));
+    this.saveTasks(this.tasks().map(t=>({...t, tags:(t.tags||[]).filter(tid=>tid!==id)})));
+  },
+  getTag(id) { return this.tags().find(t=>t.id===id)||null; },
+
   seed() {
-    if (this.projects().length>0) return;
-    const p1 = this.addProject({name:'Personal', color:'#1a1a1a'});
-    const p2 = this.addProject({name:'Trabajo',  color:'#3b82f6'});
-    const p3 = this.addProject({name:'Salud',    color:'#10b981'});
-    const t = gtToday(), [y,m,d]=t.split('-').map(Number);
-    const tmrw = gtToYMD(new Date(y,m-1,d+1));
-    this.addTask({title:'Revisar correos del equipo', projectId:p2.id, priority:'high', dueDate:t, dueTime:'09:00', duration:30});
-    this.addTask({title:'Preparar demo del sprint', projectId:p2.id, status:'in-progress', priority:'high', dueDate:t, dueTime:'14:00', duration:60,
-      subtasks:[{id:gtId(),title:'Slides de avances',done:true},{id:gtId(),title:'Demo en vivo',done:false}]});
-    this.addTask({title:'Actualizar documentación', projectId:p2.id, priority:'medium', dueDate:tmrw, duration:90});
-    this.addTask({title:'Comprar ingredientes', projectId:p1.id, priority:'low', dueDate:t, duration:20});
-    this.addTask({title:'Ejercicio 30 min', projectId:p3.id, status:'done', priority:'medium', dueDate:t, dueTime:'07:00', duration:30});
+    const SEED_V = '4';
+    if (localStorage.getItem('gt_seed_v') === SEED_V) return;
+
+    // ── Etiquetas: reemplazar si siguen siendo los defaults viejos ──
+    const OLD_TAGS = new Set(['Urgente','Comercial','Marketing','Hot Sale','Expo','DEVANE']);
+    const existingTags = this.tags();
+    if (existingTags.length === 0 || existingTags.every(t => OLD_TAGS.has(t.name))) {
+      const oldIds = existingTags.map(t => t.id);
+      if (oldIds.length > 0)
+        this.saveTasks(this.tasks().map(t => ({...t, tags:(t.tags||[]).filter(id=>!oldIds.includes(id))})));
+      this.saveTags([]);
+      this.addTag({name:'GAIA',   color:'#1a1a1a'});
+      this.addTag({name:'Devane', color:'#3b82f6'});
+    }
+
+    // ── Proyectos: vaciar si siguen siendo los defaults viejos ──
+    const OLD_PROJS = new Set(['Personal','Trabajo','Salud']);
+    const existingProjs = this.projects();
+    if (existingProjs.length === 0 || existingProjs.every(p => OLD_PROJS.has(p.name))) {
+      this.saveProjects([]);
+      this.saveTasks([]);
+    }
+
+    // ── Prioridad Mínima: actualizar a azul claro si era el gris viejo ──
+    const stored = localStorage.getItem('gt_prio_colors');
+    if (!stored || JSON.parse(stored).minimal === '#94a3b8') {
+      const c = this.prioColors();
+      c.minimal = '#60a5fa';
+      this.savePrioColors(c);
+    }
+
+    localStorage.setItem('gt_seed_v', SEED_V);
   }
 };
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 
-function gtPrioLabel(p) { return {low:'Baja',medium:'Media',high:'Alta'}[p]||p; }
+function gtPrioLabel(p) { return {critical:'Crítica',high:'Alta',medium:'Media',low:'Baja',minimal:'Mínima'}[p]||p; }
 function gtStatLabel(s) { return {todo:'Por hacer','in-progress':'En progreso',done:'Hecho'}[s]||s; }
 
+const GT_PRIO_ORDER = {critical:0,high:1,medium:2,low:3,minimal:4};
+
 function gtPrioBadge(p) {
-  const c={low:{bg:'#f0fdf4',t:'#16a34a'},medium:{bg:'#fffbeb',t:'#d97706'},high:{bg:'#fef2f2',t:'#dc2626'}}[p]||{bg:'#f1f5f9',t:'#64748b'};
-  return `<span class="gt-badge" style="background:${c.bg};color:${c.t}">${gtPrioLabel(p)}</span>`;
+  const defaults={critical:'#b91c1c',high:'#dc2626',medium:'#d97706',low:'#16a34a',minimal:'#94a3b8'};
+  const color=(GT.prioColors()[p]||defaults[p]||'#64748b');
+  return `<span class="gt-badge" style="background:${color}1c;color:${color}">${gtPrioLabel(p)}</span>`;
 }
 
 function gtStatBadge(s) {
@@ -648,6 +704,52 @@ function gtDueSpan(date,time) {
   return `<span class="gt-due ${cls}">${gtFmtShort(date)}${t}</span>`;
 }
 
+function gtTagChip(tagId) {
+  const tag=GT.getTag(tagId); if(!tag) return '';
+  return `<span class="gt-tag-chip" style="background:${tag.color}22;color:${tag.color};border-color:${tag.color}44">${gtEsc(tag.name)}</span>`;
+}
+
+function gtRecBadge(task) {
+  if (!task.recurrence||task.recurrence.type==='none') return '';
+  const labels={daily:'Diario',weekly:'Semanal',monthly:'Mensual',yearly:'Anual'};
+  const label=labels[task.recurrence.type]||'';
+  const n=task.recurrence.interval>1?` c/${task.recurrence.interval}`:'';
+  return `<span class="gt-rec-badge" title="Recurrente: ${label}${n}">↻</span>`;
+}
+
+// ── Recurrence logic ──────────────────────────────────────────────────────────
+
+function gtGetOccurrencesInRange(task, fromDate, toDate) {
+  if (!task.dueDate) return [];
+  const rec=task.recurrence||{type:'none'};
+  if (rec.type==='none'||!rec.type) {
+    return (task.dueDate>=fromDate&&task.dueDate<=toDate)?[task.dueDate]:[];
+  }
+  const {type, interval=1, endDate} = rec;
+  const dates=[];
+  let cur=new Date(task.dueDate+'T12:00:00');
+  const from=new Date(fromDate+'T12:00:00');
+  const to=new Date(toDate+'T12:00:00');
+  const recEnd=endDate?new Date(endDate+'T12:00:00'):null;
+  let safety=0;
+  while (cur<=to&&safety++<500) {
+    if (recEnd&&cur>recEnd) break;
+    const ds=gtToYMD(cur);
+    if (ds>=fromDate) dates.push(ds);
+    const n=Math.max(1,interval||1);
+    if (type==='daily')   cur.setDate(cur.getDate()+n);
+    else if (type==='weekly')  cur.setDate(cur.getDate()+7*n);
+    else if (type==='monthly') cur.setMonth(cur.getMonth()+n);
+    else if (type==='yearly')  cur.setFullYear(cur.getFullYear()+n);
+    else break;
+  }
+  return dates;
+}
+
+function gtTaskOccursOn(task, dateStr) {
+  return gtGetOccurrencesInRange(task, dateStr, dateStr).length>0;
+}
+
 // ── Tab: Hoy ─────────────────────────────────────────────────────────────────
 
 function gtRenderHoy() {
@@ -657,23 +759,69 @@ function gtRenderHoy() {
   if (grEl) grEl.textContent=greeting;
   if (dtEl) dtEl.textContent=gtFmtLong(gtToday());
 
+  // ── Stats row ─────────────────────────────────────────────
+  const allTasks = GT.tasks();
+  const todayTasks = allTasks.filter(t=>gtTaskOccursOn(t, gtToday()));
+  const todayDone  = todayTasks.filter(t=>t.status==='done').length;
+  const todayTotal = todayTasks.length;
+  const todayPct   = todayTotal>0 ? Math.round(todayDone/todayTotal*100) : 0;
+
+  const wkDates  = gtWeekDates();
+  const wkTasks  = allTasks.filter(t=>wkDates.some(d=>gtTaskOccursOn(t,d)));
+  const wkDone   = wkTasks.filter(t=>t.status==='done').length;
+  const wkTotal  = wkTasks.length;
+  const wkPct    = wkTotal>0 ? Math.round(wkDone/wkTotal*100) : 0;
+
+  const urgentCount  = allTasks.filter(t=>(t.priority==='critical'||t.priority==='high')&&t.status!=='done').length;
+  const overdueCount = allTasks.filter(t=>t.dueDate&&t.dueDate<gtToday()&&t.status!=='done').length;
+
+  const setEl = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const setW  = (id,v) => { const el=document.getElementById(id); if(el) el.style.width=v; };
+
+  setEl('db-done-num',   todayDone);
+  setEl('db-done-denom', '/'+todayTotal);
+  setW('db-done-fill',   todayPct+'%');
+  setEl('db-week-num',   wkPct+'%');
+  setEl('db-week-sub',   wkDone+' de '+wkTotal+' tareas');
+  setW('db-week-fill',   wkPct+'%');
+  setEl('db-urgent-num', urgentCount);
+  setEl('db-overdue-num',overdueCount);
+
+  // Color dinámico en overdue
+  const overdueEl=document.getElementById('db-overdue-num');
+  if(overdueEl) overdueEl.className='db-stat-num'+(overdueCount>0?' db-num-red':'');
+  const urgentEl=document.getElementById('db-urgent-num');
+  if(urgentEl) urgentEl.className='db-stat-num'+(urgentCount>0?' db-num-amber':'');
+  const doneEl=document.getElementById('db-done-num');
+  if(doneEl) doneEl.className='db-stat-num'+(todayDone>0&&todayDone===todayTotal?' db-num-green':'');
+
+  // Focus badge
+  setEl('db-focus-badge', todayDone+'/'+todayTotal);
+  // Week badge
+  setEl('db-week-badge', wkPct+'%');
+
   // Today list
   const todayEl = document.getElementById('gt-today-list');
   if (todayEl) {
-    const tasks = GT.tasks().filter(t=>t.dueDate===gtToday())
-      .sort((a,b)=>{ const p={high:0,medium:1,low:2}; if(a.status==='done'&&b.status!=='done')return 1; if(a.status!=='done'&&b.status==='done')return-1; return(p[a.priority]||1)-(p[b.priority]||1); });
+    const tasks = GT.tasks().filter(t=>gtTaskOccursOn(t, gtToday()))
+      .sort((a,b)=>{ if(a.status==='done'&&b.status!=='done')return 1; if(a.status!=='done'&&b.status==='done')return-1; return(GT_PRIO_ORDER[a.priority]??2)-(GT_PRIO_ORDER[b.priority]??2); });
     todayEl.innerHTML = tasks.length===0 ? '<p style="color:var(--text-secondary);font-size:0.84rem;padding:0.5rem 0">Sin tareas para hoy</p>'
-      : tasks.map(t=>`
-        <div class="gt-today-item" data-id="${t.id}">
+      : tasks.map(t=>{
+        const tagChips=(t.tags||[]).map(tid=>gtTagChip(tid)).join('');
+        return `<div class="gt-today-item" data-id="${t.id}">
           <button class="gt-check ${t.status==='done'?'checked':''}" data-id="${t.id}">
             <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 8 6.5 11 13 4.5"/></svg>
           </button>
           <div class="gt-today-info">
-            <span class="gt-today-title" style="${t.status==='done'?'text-decoration:line-through;opacity:0.45':''}">${gtEsc(t.title)}</span>
-            ${t.dueTime?`<span class="gt-today-time">${t.dueTime}</span>`:''}
+            <span class="gt-today-title" style="${t.status==='done'?'text-decoration:line-through;opacity:0.45':''}">${gtRecBadge(t)}${gtEsc(t.title)}</span>
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+              ${t.dueTime?`<span class="gt-today-time">${t.dueTime}</span>`:''}
+              ${tagChips}
+            </div>
           </div>
           ${gtPrioBadge(t.priority)}
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
     todayEl.querySelectorAll('.gt-today-item').forEach(el=>{
       el.addEventListener('click', e=>{ if (!e.target.closest('.gt-check')) gtOpenModal(el.dataset.id); });
@@ -687,53 +835,61 @@ function gtRenderHoy() {
     });
   }
 
-  // Weekly
+  // Weekly bars
   const weekEl = document.getElementById('gt-weekly');
   if (weekEl) {
-    const wk=gtWeekDates(), all=GT.tasks();
-    const wkTasks=all.filter(t=>t.dueDate&&wk.includes(t.dueDate));
-    const done=wkTasks.filter(t=>t.status==='done').length, total=wkTasks.length;
-    const pct=total>0?Math.round(done/total*100):0;
+    const wk=gtWeekDates();
     const names=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     const bars=wk.map((date,i)=>{
-      const dt=all.filter(t=>t.dueDate===date), dp=dt.length>0?Math.round(dt.filter(t=>t.status==='done').length/dt.length*100):0;
+      const dt=allTasks.filter(t=>gtTaskOccursOn(t,date));
+      const dp=dt.length>0?Math.round(dt.filter(t=>t.status==='done').length/dt.length*100):0;
       return `<div class="gt-day-bar ${gtIsToday(date)?'today-bar':''}">
         <div class="gt-bar-track"><div class="gt-bar-fill" style="height:${dp}%"></div></div>
         <span class="gt-bar-label">${names[i]}</span>
       </div>`;
     }).join('');
-    weekEl.innerHTML=`<div class="gt-weekly-summary"><span class="gt-weekly-pct">${pct}%</span><span class="gt-weekly-sub">${done} de ${total} completadas</span></div>
+    weekEl.innerHTML=`<div class="gt-weekly-summary"><span class="gt-weekly-pct">${wkPct}%</span><span class="gt-weekly-sub">${wkDone} de ${wkTotal} completadas</span></div>
       <div class="gt-day-bars">${bars}</div>`;
   }
 
-  // Projects
+  // Projects — compact rows
   const projEl = document.getElementById('gt-projects');
   if (projEl) {
-    const all=GT.tasks();
-    projEl.innerHTML=GT.projects().map(p=>{
-      const pt=all.filter(t=>t.projectId===p.id), done=pt.filter(t=>t.status==='done').length;
+    const projs = GT.projects();
+    if (projs.length===0) { projEl.innerHTML='<p class="db-empty">Sin proyectos</p>'; return; }
+    projEl.innerHTML=projs.map(p=>{
+      const pt=allTasks.filter(t=>t.projectId===p.id);
+      const done=pt.filter(t=>t.status==='done').length;
       const pct=pt.length>0?Math.round(done/pt.length*100):0;
-      const todayN=pt.filter(t=>t.dueDate===gtToday()&&t.status!=='done').length;
-      return `<div class="gt-project-card" data-id="${p.id}">
-        <div class="gt-proj-head"><span class="gt-proj-dot" style="background:${p.color}"></span><span class="gt-proj-name">${gtEsc(p.name)}</span></div>
-        <div class="gt-proj-bar"><div class="gt-proj-fill" style="width:${pct}%;background:${p.color}"></div></div>
-        <div class="gt-proj-foot"><span>${pct}% · ${pt.length} tareas</span>${todayN>0?`<span class="gt-proj-today">${todayN} hoy</span>`:''}</div>
+      const todayN=pt.filter(t=>gtTaskOccursOn(t,gtToday())&&t.status!=='done').length;
+      const countHtml=todayN>0
+        ?`<span class="db-proj-today-badge">${todayN} hoy</span>`
+        :`<span class="db-proj-tasks">${pt.length} tar.</span>`;
+      return `<div class="db-proj-row" data-id="${p.id}">
+        <span class="db-proj-dot" style="background:${p.color}"></span>
+        <span class="db-proj-name">${gtEsc(p.name)}</span>
+        <div class="db-proj-bar"><div class="db-proj-bar-fill" style="width:${pct}%;background:${p.color}"></div></div>
+        <span class="db-proj-pct">${pct}%</span>
+        ${countHtml}
       </div>`;
     }).join('');
-    projEl.querySelectorAll('.gt-project-card').forEach(card=>{
-      card.addEventListener('click',()=>{
+    projEl.querySelectorAll('.db-proj-row').forEach(row=>{
+      row.addEventListener('click',()=>{
         gtSwitchTab('lista');
         const sel=document.getElementById('gt-filter-project');
-        if(sel){sel.value=card.dataset.id; gtFilters.project=card.dataset.id; gtRenderLista();}
+        if(sel){sel.value=row.dataset.id; gtFilters.project=row.dataset.id; gtRenderLista();}
       });
     });
   }
+
+  // Upcoming events
+  gtRenderUpcoming();
 }
 
 // ── Tab: Lista / Kanban ───────────────────────────────────────────────────────
 
 let gtListView = 'list';
-const gtFilters = { search:'', project:'', status:'' };
+const gtFilters = { search:'', project:'', status:'', tag:'' };
 
 function gtRefreshProjectFilter(el) {
   if (!el) return;
@@ -742,11 +898,19 @@ function gtRefreshProjectFilter(el) {
   if (saved) el.value=saved;
 }
 
+function gtRefreshTagFilter(el) {
+  if (!el) return;
+  const saved = el.value||gtFilters.tag;
+  el.innerHTML='<option value="">Todas las etiquetas</option>'+GT.tags().map(tag=>`<option value="${tag.id}">${gtEsc(tag.name)}</option>`).join('');
+  if (saved) el.value=saved;
+}
+
 function gtGetFiltered() {
   let list=GT.tasks();
   if (gtFilters.search) { const s=gtFilters.search.toLowerCase(); list=list.filter(t=>t.title.toLowerCase().includes(s)); }
   if (gtFilters.project) list=list.filter(t=>t.projectId===gtFilters.project);
   if (gtFilters.status)  list=list.filter(t=>t.status===gtFilters.status);
+  if (gtFilters.tag)     list=list.filter(t=>(t.tags||[]).includes(gtFilters.tag));
   return list;
 }
 
@@ -767,9 +931,13 @@ function gtRenderTable() {
   if (tasks.length===0){tbody.innerHTML=`<tr><td colspan="6" class="gt-empty">No hay tareas que coincidan.</td></tr>`;return;}
   tbody.innerHTML=tasks.map(t=>{
     const sp=t.subtasks.length>0?Math.round(t.subtasks.filter(s=>s.done).length/t.subtasks.length*100):null;
+    const tagChips=(t.tags||[]).map(tid=>gtTagChip(tid)).join('');
     return `<tr class="gt-task-row ${t.status==='done'?'gt-done':''}" data-id="${t.id}">
       <td>${gtStatBadge(t.status)}</td>
-      <td><div class="gt-task-cell"><span class="gt-task-title">${gtEsc(t.title)}</span>${sp!==null?`<span class="gt-sub-pct">${sp}%</span>`:''}</div></td>
+      <td><div class="gt-task-cell">
+        <div><span class="gt-task-title">${gtRecBadge(t)}${gtEsc(t.title)}</span>${sp!==null?`<span class="gt-sub-pct">${sp}%</span>`:''}</div>
+        ${tagChips?`<div class="gt-task-tags">${tagChips}</div>`:''}
+      </div></td>
       <td>${gtChip(t.projectId)}</td>
       <td>${gtPrioBadge(t.priority)}</td>
       <td>${gtDueSpan(t.dueDate,t.dueTime)}</td>
@@ -785,10 +953,13 @@ function gtRenderKanban() {
     const body=col.querySelector('.gt-col-body'); if (!body) return;
     const tasks=gtGetFiltered().filter(t=>t.status===status);
     body.innerHTML=tasks.length===0?'<p class="gt-kanban-empty">Sin tareas</p>'
-      :tasks.map(t=>`<div class="gt-card-item" data-id="${t.id}" draggable="true">
-        <div class="gt-card-item-title">${gtEsc(t.title)}</div>
-        <div class="gt-card-item-foot">${gtChip(t.projectId)}${gtPrioBadge(t.priority)}${gtDueSpan(t.dueDate,null)}</div>
-      </div>`).join('');
+      :tasks.map(t=>{
+        const tagChips=(t.tags||[]).map(tid=>gtTagChip(tid)).join('');
+        return `<div class="gt-card-item" data-id="${t.id}" draggable="true">
+          <div class="gt-card-item-title">${gtRecBadge(t)}${gtEsc(t.title)}</div>
+          <div class="gt-card-item-foot">${gtChip(t.projectId)}${gtPrioBadge(t.priority)}${gtDueSpan(t.dueDate,null)}${tagChips}</div>
+        </div>`;
+      }).join('');
     body.querySelectorAll('.gt-card-item').forEach(card=>{
       card.addEventListener('click',()=>gtOpenModal(card.dataset.id));
       card.addEventListener('dragstart',e=>{e.dataTransfer.setData('gtTaskId',card.dataset.id);card.classList.add('gt-dragging');});
@@ -836,7 +1007,7 @@ function gtRenderCalAllDay(wk) {
   const all=GT.tasks();
   el.innerHTML='<div class="gt-cal-time-label" style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.04em">Todo<br>el día</div>'+
     wk.map(date=>{
-      const dt=all.filter(t=>t.dueDate===date&&!t.dueTime);
+      const dt=all.filter(t=>gtTaskOccursOn(t,date)&&!t.dueTime);
       return `<div class="gt-allday-cell" data-date="${date}">${dt.map(t=>{
         const p=GT.getProject(t.projectId), color=p?p.color:'#1a1a1a';
         return `<div class="gt-cal-event" data-id="${t.id}" style="background:${color}20;border-left:3px solid ${color};color:${color}">${gtEsc(t.title)}</div>`;
@@ -853,7 +1024,7 @@ function gtRenderCalSlots(wk) {
   const timeCol=Array.from({length:END-START},(_,i)=>
     `<div class="gt-hour-label" style="height:${PX}px">${String(START+i).padStart(2,'0')}:00</div>`).join('');
   const cols=wk.map(date=>{
-    const dt=all.filter(t=>t.dueDate===date&&t.dueTime&&parseInt(t.dueTime)>=START&&parseInt(t.dueTime)<END);
+    const dt=all.filter(t=>gtTaskOccursOn(t,date)&&t.dueTime&&parseInt(t.dueTime)>=START&&parseInt(t.dueTime)<END);
     const lines=Array.from({length:END-START},(_,i)=>`<div class="gt-hour-line" style="top:${i*PX}px"></div>`).join('');
     const blocks=dt.map(t=>{
       const [h,min]=t.dueTime.split(':').map(Number), top=((h-START)*60+min)/60*PX;
@@ -876,6 +1047,298 @@ function gtRenderCalSlots(wk) {
   }));
 }
 
+// ── Dashboard: upcoming events ────────────────────────────────────────────────
+
+function gtRenderUpcoming() {
+  const el = document.getElementById('db-upcoming');
+  const badgeEl = document.getElementById('db-upcoming-badge');
+  if (!el) return;
+
+  const today = gtToday();
+  const [ty, tm, td] = today.split('-').map(Number);
+  const fromDate = gtToYMD(new Date(ty, tm - 1, td + 1));   // mañana
+  const toDate   = gtToYMD(new Date(ty, tm - 1, td + 15));  // +15 días
+
+  const allTasks = GT.tasks();
+  const events = [];
+
+  allTasks.forEach(task => {
+    if (task.status === 'done') return;
+    const occs = gtGetOccurrencesInRange(task, fromDate, toDate)
+                   .filter(d => d > today);  // garantía extra: excluir hoy
+    if (occs.length > 0) events.push({ task, date: occs[0] });
+  });
+
+  events.sort((a, b) => a.date.localeCompare(b.date));
+  const items = events.slice(0, 8);
+
+  if (badgeEl) badgeEl.textContent = items.length > 0 ? items.length : '';
+
+  if (items.length === 0) {
+    el.innerHTML = '<p class="db-empty">Sin eventos en los próximos 14 días</p>';
+    return;
+  }
+
+  el.innerHTML = items.map(({ task, date }) => {
+    const todayD   = new Date(today + 'T12:00:00');
+    const eventD   = new Date(date + 'T12:00:00');
+    const dayDiff  = Math.round((eventD - todayD) / 86400000);
+    const dateLabel = dayDiff === 1 ? 'Mañana' : gtFmtShort(date);
+    const isSoon   = dayDiff <= 2;
+    const isRec    = task.recurrence && task.recurrence.type !== 'none';
+    const proj     = GT.getProject(task.projectId);
+
+    // Prefer first tag chip, fallback to project dot
+    const firstTag = (task.tags || []).length > 0 ? GT.getTag(task.tags[0]) : null;
+    const metaHtml = firstTag
+      ? `<span class="db-upcoming-tag" style="background:${firstTag.color}20;color:${firstTag.color};border-color:${firstTag.color}40">${gtEsc(firstTag.name)}</span>`
+      : (proj ? `<span class="db-upcoming-dot" style="background:${proj.color}" title="${gtEsc(proj.name)}"></span>` : '');
+
+    return `<div class="db-upcoming-item" data-id="${task.id}">
+      <span class="db-upcoming-date${isSoon ? ' db-date-soon' : ''}">${dateLabel}</span>
+      <span class="db-upcoming-title">${isRec ? '↻ ' : ''}${gtEsc(task.title)}</span>
+      ${metaHtml}
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.db-upcoming-item').forEach(item => {
+    item.addEventListener('click', () => gtOpenModal(item.dataset.id));
+  });
+}
+
+// ── Tags: modal picker ────────────────────────────────────────────────────────
+
+function gtRenderModalTagsPicker(selectedIds=[]) {
+  const container=document.getElementById('gt-modal-tags-picker'); if(!container) return;
+  const tags=GT.tags();
+  if (tags.length===0) {
+    container.innerHTML='<span class="gt-tags-empty-hint">Sin etiquetas. Créalas en la pestaña <b>Configuraciones</b>.</span>';
+    return;
+  }
+  container.innerHTML=tags.map(tag=>{
+    const sel=selectedIds.includes(tag.id);
+    const selStyle=sel?`background:${tag.color}22;border-color:${tag.color};color:${tag.color}`:'';
+    return `<button type="button" class="gt-modal-tag-btn ${sel?'selected':''}" data-tag-id="${tag.id}" data-color="${tag.color}" style="${selStyle}">
+      <span class="gt-modal-tag-dot" style="background:${tag.color}"></span>${gtEsc(tag.name)}
+    </button>`;
+  }).join('');
+  container.querySelectorAll('.gt-modal-tag-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const c=btn.dataset.color||'#999';
+      btn.classList.toggle('selected');
+      if (btn.classList.contains('selected')) {
+        btn.style.background=c+'22'; btn.style.borderColor=c; btn.style.color=c;
+      } else {
+        btn.style.background=''; btn.style.borderColor=''; btn.style.color='';
+      }
+    });
+  });
+}
+
+function gtGetModalSelectedTags() {
+  return Array.from(document.querySelectorAll('#gt-modal-tags-picker .gt-modal-tag-btn.selected')).map(b=>b.dataset.tagId);
+}
+
+// ── Recurrence modal helpers ──────────────────────────────────────────────────
+
+function gtToggleRecurrenceFields() {
+  const type=document.getElementById('gt-rec-type')?.value||'none';
+  const iWrap=document.getElementById('gt-rec-interval-wrap');
+  const eWrap=document.getElementById('gt-rec-end-wrap');
+  const unitEl=document.getElementById('gt-rec-unit');
+  const show=type!=='none';
+  if(iWrap) iWrap.style.display=show?'flex':'none';
+  if(eWrap) eWrap.style.display=show?'':'none';
+  const units={daily:'días',weekly:'semanas',monthly:'meses',yearly:'años'};
+  if(unitEl) unitEl.textContent=units[type]||'';
+}
+
+// ── Tags: Etiquetas tab ───────────────────────────────────────────────────────
+
+function gtRenderTagsTab() {
+  const listEl=document.getElementById('gt-tags-list');
+  const emptyEl=document.getElementById('gt-tags-empty');
+  if (!listEl||!emptyEl) return;
+  const tags=GT.tags(), allTasks=GT.tasks();
+  if (tags.length===0) { listEl.innerHTML=''; emptyEl.style.display=''; return; }
+  emptyEl.style.display='none';
+  const editSvg=`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`;
+  const delSvg =`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 4 13 4"/><path d="M5 4V2h6v2M4 4l1 10h6l1-10"/></svg>`;
+  listEl.innerHTML=tags.map(tag=>{
+    const count=allTasks.filter(t=>(t.tags||[]).includes(tag.id)).length;
+    return `<div class="cfg-item-row">
+      <div class="cfg-item-left">
+        <span class="cfg-item-dot" style="background:${tag.color}" data-edit="${tag.id}"></span>
+        <span class="cfg-item-name">${gtEsc(tag.name)}</span>
+        <span class="gt-tag-chip" style="background:${tag.color}20;color:${tag.color};border-color:${tag.color}40">${gtEsc(tag.name)}</span>
+      </div>
+      <div class="cfg-item-right">
+        <span class="cfg-item-count">${count} ${count===1?'tarea':'tareas'}</span>
+        <button class="cfg-icon-btn" data-edit="${tag.id}" title="Editar">${editSvg}</button>
+        <button class="cfg-icon-btn cfg-del" data-del="${tag.id}" title="Eliminar">${delSvg}</button>
+      </div>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('click',()=>gtOpenTagModal(el.dataset.edit,'tag'));
+  });
+  listEl.querySelectorAll('.cfg-del[data-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const tag=GT.getTag(btn.dataset.del);
+      if(confirm(`¿Eliminar la etiqueta "${tag?.name||''}"?\nSe quitará de todas las tareas.`)){
+        GT.removeTag(btn.dataset.del);
+        gtRenderTagsTab();
+        gtRefreshTagFilter(document.getElementById('gt-filter-tag'));
+      }
+    });
+  });
+}
+
+// ── Configuraciones: proyectos ────────────────────────────────────────────────
+
+function gtRenderProjectsSection() {
+  const listEl=document.getElementById('cfg-projects-list'); if(!listEl) return;
+  const projs=GT.projects(), all=GT.tasks();
+  if(projs.length===0){ listEl.innerHTML='<div class="cfg-empty-state">Sin proyectos. Crea el primero.</div>'; return; }
+  const editIcon=`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 2l3 3L5 14H2v-3L11 2z"/></svg>`;
+  const delIcon =`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 4 13 4"/><path d="M5 4V2h6v2M4 4l1 10h6l1-10"/></svg>`;
+  listEl.innerHTML=projs.map(p=>{
+    const count=all.filter(t=>t.projectId===p.id).length;
+    return `<div class="cfg-item-row">
+      <div class="cfg-item-left">
+        <span class="cfg-item-dot" style="background:${p.color}" data-edit-proj="${p.id}"></span>
+        <span class="cfg-item-name">${gtEsc(p.name)}</span>
+        <span class="gt-tag-chip" style="background:${p.color}20;color:${p.color};border-color:${p.color}40">${gtEsc(p.name)}</span>
+      </div>
+      <div class="cfg-item-right">
+        <span class="cfg-item-count">${count} tar.</span>
+        <button class="cfg-icon-btn" data-edit-proj="${p.id}" title="Editar">${editIcon}</button>
+        <button class="cfg-icon-btn cfg-del" data-del-proj="${p.id}" title="Eliminar">${delIcon}</button>
+      </div>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-edit-proj]').forEach(el=>{
+    el.addEventListener('click',()=>gtOpenTagModal(el.dataset.editProj,'project'));
+  });
+  listEl.querySelectorAll('[data-del-proj]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const p=GT.getProject(btn.dataset.delProj);
+      if(confirm(`¿Eliminar el proyecto "${p?.name||''}"?\nLas tareas quedarán sin proyecto asignado.`)){
+        GT.removeProject(btn.dataset.delProj);
+        gtRenderProjectsSection();
+        gtRefreshProjectFilter(document.getElementById('gt-filter-project'));
+        gtRefreshPanel();
+      }
+    });
+  });
+}
+
+// ── Configuraciones: prioridades ──────────────────────────────────────────────
+
+function gtRenderPrioritySection() {
+  const el=document.getElementById('cfg-prio-list'); if(!el) return;
+  const colors=GT.prioColors();
+  const prios=[
+    {key:'critical',label:'Crítica'},
+    {key:'high',    label:'Alta'},
+    {key:'medium',  label:'Media'},
+    {key:'low',     label:'Baja'},
+    {key:'minimal', label:'Mínima'}
+  ];
+  el.innerHTML=prios.map(p=>{
+    const color=colors[p.key]||'#64748b';
+    return `<div class="cfg-item-row">
+      <div class="cfg-item-left">
+        <input type="color" class="cfg-prio-dot" data-prio="${p.key}" value="${color}" title="Cambiar color">
+        <span class="cfg-item-name">${p.label}</span>
+        <span class="gt-badge" id="cfg-pp-${p.key}" style="background:${color}1c;color:${color}">${p.label}</span>
+      </div>
+      <div class="cfg-item-right">
+        <span class="cfg-prio-hex" id="cfg-ph-${p.key}">${color}</span>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.cfg-prio-dot').forEach(input=>{
+    input.addEventListener('input',()=>{
+      const prio=input.dataset.prio, color=input.value;
+      const c=GT.prioColors(); c[prio]=color; GT.savePrioColors(c);
+      const badge=document.getElementById(`cfg-pp-${prio}`);
+      if(badge){ badge.style.background=color+'1c'; badge.style.color=color; }
+      const hexEl=document.getElementById(`cfg-ph-${prio}`);
+      if(hexEl) hexEl.textContent=color;
+      gtRefreshPanel();
+    });
+  });
+}
+
+// ── Tag / Project editor modal (shared) ───────────────────────────────────────
+
+let gtCurrentTagId  = null;
+let gtCurrentProjId = null;
+let gtEditorMode    = 'tag'; // 'tag' | 'project'
+
+function gtOpenTagModal(id=null, mode='tag') {
+  gtEditorMode=mode;
+  gtCurrentTagId=null; gtCurrentProjId=null;
+  const nameEl=document.getElementById('gt-tag-name');
+  const colorEl=document.getElementById('gt-tag-color');
+  const heading=document.getElementById('gt-tag-modal-heading');
+  const delBtn=document.getElementById('gt-tag-delete');
+  const labels={ tag:{new:'Nueva etiqueta',edit:'Editar etiqueta'}, project:{new:'Nuevo proyecto',edit:'Editar proyecto'} };
+
+  let name='', color='#3b82f6', isEdit=false;
+  if(mode==='project'&&id) {
+    const p=GT.getProject(id); if(!p) return;
+    gtCurrentProjId=id; name=p.name; color=p.color; isEdit=true;
+  } else if(mode==='tag'&&id) {
+    const t=GT.getTag(id); if(!t) return;
+    gtCurrentTagId=id; name=t.name; color=t.color; isEdit=true;
+  }
+
+  if(heading) heading.textContent=labels[mode][isEdit?'edit':'new'];
+  if(nameEl)  nameEl.value=name;
+  if(colorEl) colorEl.value=color;
+  if(delBtn)  delBtn.style.display=isEdit?'':'none';
+  gtUpdateTagPreview();
+  document.getElementById('gt-tag-modal-overlay')?.classList.add('gt-visible');
+  setTimeout(()=>nameEl?.focus(),60);
+}
+
+function gtCloseTagModal() {
+  document.getElementById('gt-tag-modal-overlay')?.classList.remove('gt-visible');
+  gtCurrentTagId=null; gtCurrentProjId=null;
+}
+
+function gtUpdateTagPreview() {
+  const color=document.getElementById('gt-tag-color')?.value||'#3b82f6';
+  const name=document.getElementById('gt-tag-name')?.value||(gtEditorMode==='project'?'Proyecto':'Etiqueta');
+  const preview=document.getElementById('gt-tag-preview');
+  if(preview) preview.innerHTML=`<span class="gt-tag-chip" style="background:${color}22;color:${color};border-color:${color}44">${gtEsc(name)}</span>`;
+}
+
+function gtSaveTagModal() {
+  const nameEl=document.getElementById('gt-tag-name');
+  const name=(nameEl?.value||'').trim();
+  if(!name){nameEl?.classList.add('gt-error');nameEl?.focus();setTimeout(()=>nameEl?.classList.remove('gt-error'),600);return;}
+  const color=document.getElementById('gt-tag-color')?.value||'#3b82f6';
+
+  if(gtEditorMode==='project') {
+    if(gtCurrentProjId) GT.editProject(gtCurrentProjId,{name,color});
+    else GT.addProject({name,color});
+    gtCloseTagModal();
+    gtRenderProjectsSection();
+    gtRefreshProjectFilter(document.getElementById('gt-filter-project'));
+    gtRefreshPanel();
+  } else {
+    if(gtCurrentTagId) GT.editTag(gtCurrentTagId,{name,color});
+    else GT.addTag({name,color});
+    gtCloseTagModal();
+    gtRenderTagsTab();
+    gtRefreshTagFilter(document.getElementById('gt-filter-tag'));
+    gtRenderModalTagsPicker([]);
+  }
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 let gtCurrentTaskId = null;
@@ -895,6 +1358,14 @@ function gtOpenModal(taskId, defaults={}) {
   document.getElementById('gt-subtasks-list').innerHTML='';
   document.getElementById('gt-delete').style.display='none';
   document.getElementById('gt-modal-heading').textContent='Nueva tarea';
+  const recType=document.getElementById('gt-rec-type');
+  const recInterval=document.getElementById('gt-rec-interval');
+  const recEnd=document.getElementById('gt-rec-end');
+  if(recType) recType.value='none';
+  if(recInterval) recInterval.value='1';
+  if(recEnd) recEnd.value='';
+  gtToggleRecurrenceFields();
+  gtRenderModalTagsPicker([]);
 
   if (taskId) {
     const t=GT.getTask(taskId); if (!t) return;
@@ -909,6 +1380,12 @@ function gtOpenModal(taskId, defaults={}) {
     document.getElementById('gt-duration').value=t.duration||30;
     document.getElementById('gt-delete').style.display='';
     (t.subtasks||[]).forEach(s=>gtAddSubtask(s.title,s.done,s.id));
+    const rec=t.recurrence||{type:'none',interval:1,endDate:null};
+    if(recType) recType.value=rec.type||'none';
+    if(recInterval) recInterval.value=rec.interval||1;
+    if(recEnd) recEnd.value=rec.endDate||'';
+    gtToggleRecurrenceFields();
+    gtRenderModalTagsPicker(t.tags||[]);
   } else {
     if (defaults.dueDate) document.getElementById('gt-due-date').value=defaults.dueDate;
     if (defaults.dueTime) document.getElementById('gt-due-time').value=defaults.dueTime;
@@ -950,6 +1427,11 @@ function gtSaveModal() {
   const subtasks=Array.from(document.querySelectorAll('#gt-subtasks-list .gt-subtask-row')).map(row=>({
     id:row.dataset.id, title:row.querySelector('.gt-subtask-input').value.trim(), done:row.querySelector('.gt-subtask-check').checked
   })).filter(s=>s.title);
+  const recT=document.getElementById('gt-rec-type')?.value||'none';
+  const recI=parseInt(document.getElementById('gt-rec-interval')?.value)||1;
+  const recE=document.getElementById('gt-rec-end')?.value||null;
+  const recurrence={type:recT,interval:recI,endDate:recE};
+  const tags=gtGetModalSelectedTags();
   const data={
     title, description:document.getElementById('gt-description').value.trim(),
     projectId:document.getElementById('gt-project').value,
@@ -958,7 +1440,7 @@ function gtSaveModal() {
     dueDate:document.getElementById('gt-due-date').value||null,
     dueTime:document.getElementById('gt-due-time').value||null,
     duration:parseInt(document.getElementById('gt-duration').value)||30,
-    subtasks
+    subtasks, tags, recurrence
   };
   if (gtCurrentTaskId) GT.editTask(gtCurrentTaskId,data); else GT.addTask(data);
   gtCloseModal(); gtRefreshPanel();
@@ -983,9 +1465,10 @@ function gtSwitchTab(name) {
   document.querySelector(`.gt-tab[data-tab="${name}"]`)?.classList.add('active');
   document.getElementById(`gt-tab-${name}`)?.classList.add('active');
   gtActiveTab=name;
-  if (name==='hoy')      gtRenderHoy();
-  if (name==='lista')    { gtRefreshProjectFilter(document.getElementById('gt-filter-project')); gtRenderLista(); }
+  if (name==='hoy')        gtRenderHoy();
+  if (name==='lista')      { gtRefreshProjectFilter(document.getElementById('gt-filter-project')); gtRefreshTagFilter(document.getElementById('gt-filter-tag')); gtRenderLista(); }
   if (name==='calendario') { gtCalBase=gtCalBase||gtToday(); gtRenderCal(); }
+  if (name==='etiquetas')  { gtRenderTagsTab(); gtRenderProjectsSection(); gtRenderPrioritySection(); }
 }
 
 function gtRefreshPanel() {
@@ -1006,10 +1489,12 @@ function gtInit() {
 
   // New task button
   document.getElementById('gt-new-task')?.addEventListener('click',()=>gtOpenModal());
+  document.getElementById('db-add-today')?.addEventListener('click',()=>gtOpenModal(null,{dueDate:gtToday()}));
 
   // Lista toolbar
   document.getElementById('gt-search')?.addEventListener('input',e=>{gtFilters.search=e.target.value;gtRenderLista();});
   document.getElementById('gt-filter-project')?.addEventListener('change',e=>{gtFilters.project=e.target.value;gtRenderLista();});
+  document.getElementById('gt-filter-tag')?.addEventListener('change',e=>{gtFilters.tag=e.target.value;gtRenderLista();});
   document.getElementById('gt-filter-status')?.addEventListener('change',e=>{gtFilters.status=e.target.value;gtRenderLista();});
   document.getElementById('gt-btn-list')?.addEventListener('click',()=>{
     gtListView='list'; document.getElementById('gt-btn-list')?.classList.add('active'); document.getElementById('gt-btn-kanban')?.classList.remove('active'); gtRenderLista();
@@ -1042,6 +1527,37 @@ function gtInit() {
     if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();gtSaveModal();}
     if(e.key==='Escape')gtCloseModal();
   });
+  document.getElementById('gt-rec-type')?.addEventListener('change',gtToggleRecurrenceFields);
+
+  // Configuraciones tab
+  document.getElementById('gt-new-tag')?.addEventListener('click',()=>gtOpenTagModal(null,'tag'));
+  document.getElementById('cfg-new-project')?.addEventListener('click',()=>gtOpenTagModal(null,'project'));
+
+  // Tag editor modal
+  document.getElementById('gt-tag-modal-close')?.addEventListener('click',gtCloseTagModal);
+  document.getElementById('gt-tag-cancel')?.addEventListener('click',gtCloseTagModal);
+  document.getElementById('gt-tag-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='gt-tag-modal-overlay')gtCloseTagModal();});
+  document.getElementById('gt-tag-save')?.addEventListener('click',gtSaveTagModal);
+  document.getElementById('gt-tag-delete')?.addEventListener('click',()=>{
+    if(gtEditorMode==='project'&&gtCurrentProjId) {
+      const p=GT.getProject(gtCurrentProjId);
+      if(confirm(`¿Eliminar el proyecto "${p?.name||''}"?\nLas tareas quedarán sin proyecto asignado.`)){
+        GT.removeProject(gtCurrentProjId); gtCloseTagModal();
+        gtRenderProjectsSection();
+        gtRefreshProjectFilter(document.getElementById('gt-filter-project'));
+        gtRefreshPanel();
+      }
+    } else if(gtCurrentTagId&&confirm('¿Eliminar esta etiqueta?')){
+      GT.removeTag(gtCurrentTagId); gtCloseTagModal();
+      gtRenderTagsTab(); gtRefreshTagFilter(document.getElementById('gt-filter-tag'));
+    }
+  });
+  document.getElementById('gt-tag-name')?.addEventListener('input',gtUpdateTagPreview);
+  document.getElementById('gt-tag-color')?.addEventListener('input',gtUpdateTagPreview);
+  document.getElementById('gt-tag-name')?.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();gtSaveTagModal();}
+    if(e.key==='Escape')gtCloseTagModal();
+  });
 
   // Command palette
   document.getElementById('gt-cmd-btn')?.addEventListener('click',gtOpenCmd);
@@ -1059,7 +1575,7 @@ function gtInit() {
   document.addEventListener('keydown',e=>{
     const tareasActive=document.getElementById('tareas-view')?.classList.contains('active');
     if (!tareasActive) return;
-    if (e.key==='Escape'){ gtCloseCmd(); gtCloseModal(); }
+    if (e.key==='Escape'){ gtCloseCmd(); gtCloseModal(); gtCloseTagModal(); }
     if (e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)&&!document.getElementById('gt-modal-overlay')?.classList.contains('gt-visible')){
       e.preventDefault(); gtOpenCmd();
     }
