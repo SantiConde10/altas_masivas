@@ -21,7 +21,11 @@ def transformar_df(custom_path=None):
             archivo_path = csv_files[0]
 
         logging.info(f"Leyendo archivo de datos: {archivo_path.name}")
+        required_cols = {'SKU', 'PROVEEDOR', 'DESCRIPCION', 'Agregar SKU', 'Cantidad'}
         df = pd.read_csv(archivo_path, skiprows=2, keep_default_na=False)
+        if df.empty or not required_cols.issubset(df.columns):
+            logging.info("skiprows=2 no produjo las columnas esperadas, reintentando con skiprows=0")
+            df = pd.read_csv(archivo_path, skiprows=0, keep_default_na=False)
 
         if df.empty:
             raise ValueError("El archivo no contiene datos. Verifica que el CSV tenga filas con información.")
