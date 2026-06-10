@@ -166,6 +166,39 @@
   box-shadow: var(--shadow-sm);
 }
 
+.gt-nav-stat {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.gt-nav-stat:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 10%, transparent);
+  background: color-mix(in srgb, var(--surface-color) 85%, var(--primary-color) 15%);
+}
+
+.gt-nav-arrow {
+  opacity: 0;
+  font-size: 0.6rem;
+  transition: opacity 0.15s;
+}
+
+.gt-nav-stat:hover .gt-nav-arrow { opacity: 1; }
+
+.gt-nav-count {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 4px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.gt-nav-count:hover {
+  background: var(--primary-color) !important;
+  color: #fff !important;
+  border-color: var(--primary-color) !important;
+  text-decoration: none;
+}
+
 .db-stat-main { display: flex; align-items: baseline; gap: 0.2rem; }
 
 .db-stat-num {
@@ -218,6 +251,44 @@
 }
 
 .db-fill-blue  { background: #3b82f6; }
+
+/* Quick Navigation */
+.db-quick-nav {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0 1rem;
+  flex-shrink: 0;
+}
+
+.db-quick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 1;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.db-quick-btn svg {
+  color: var(--primary-color);
+}
+
+.db-quick-btn:hover {
+  background: var(--bg-sidebar);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
 
 /* Main grid */
 .db-main {
@@ -903,9 +974,41 @@
 .gt-cal-allday {
   display: grid;
   grid-template-columns: 48px repeat(7, 1fr);
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
   min-height: 32px;
   flex-shrink: 0;
+}
+
+/* Sin fecha row */
+.gt-cal-undated {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
+  min-height: 28px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--surface-color) 60%, var(--bg-color) 40%);
+}
+
+.gt-undated-wrap {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 6px;
+  align-items: center;
+}
+
+/* Today separator in dashboard */
+.gt-today-sep {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+  padding: 0.35rem 0.4rem 0.2rem;
+  border-top: 1px dashed var(--border-color);
+  margin-top: 0.3rem;
 }
 
 .gt-cal-time-label {
@@ -1290,8 +1393,10 @@
 }
 
 .cfg-header { margin-bottom: 0.25rem; }
+.cfg-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .cfg-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 2px; }
 .cfg-sub   { font-size: 0.78rem; color: var(--text-secondary); }
+.cfg-clear-btn { font-size: 0.78rem; padding: 0.35rem 0.8rem; white-space: nowrap; flex-shrink: 0; }
 
 .cfg-grid {
   display: grid;

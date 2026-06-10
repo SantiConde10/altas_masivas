@@ -1038,25 +1038,38 @@ function gtRenderHoy() {
   // Today list
   const todayEl = document.getElementById('gt-today-list');
   if (todayEl) {
-    const tasks = GT.tasks().filter(t=>gtTaskOccursOn(t, gtToday()))
-      .sort((a,b)=>{ if(a.status==='done'&&b.status!=='done')return 1; if(a.status!=='done'&&b.status==='done')return-1; return(GT_PRIO_ORDER[a.priority]??2)-(GT_PRIO_ORDER[b.priority]??2); });
-    todayEl.innerHTML = tasks.length===0 ? '<p style="color:var(--text-secondary);font-size:0.84rem;padding:0.5rem 0">Sin tareas para hoy</p>'
-      : tasks.map(t=>{
-        const tagChips=(t.tags||[]).map(tid=>gtTagChip(tid)).join('');
-        return `<div class="gt-today-item" data-id="${t.id}">
-          <button class="gt-check ${t.status==='done'?'checked':''}" data-id="${t.id}">
-            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 8 6.5 11 13 4.5"/></svg>
-          </button>
-          <div class="gt-today-info">
-            <span class="gt-today-title" style="${t.status==='done'?'text-decoration:line-through;opacity:0.45':''}">${gtRecBadge(t)}${gtEsc(t.title)}</span>
-            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-              ${t.dueTime?`<span class="gt-today-time">${t.dueTime}</span>`:''}
-              ${tagChips}
-            </div>
+    const sortFn = (a,b)=>{ if(a.status==='done'&&b.status!=='done')return 1; if(a.status!=='done'&&b.status==='done')return-1; return(GT_PRIO_ORDER[a.priority]??2)-(GT_PRIO_ORDER[b.priority]??2); };
+    const todayTasks  = GT.tasks().filter(t=>gtTaskOccursOn(t, gtToday())).sort(sortFn);
+    const undatedTasks = GT.tasks().filter(t=>!t.dueDate && t.status!=='done').sort(sortFn);
+
+    const buildItem = t => {
+      const tagChips=(t.tags||[]).map(tid=>gtTagChip(tid)).join('');
+      return `<div class="gt-today-item" data-id="${t.id}">
+        <button class="gt-check ${t.status==='done'?'checked':''}" data-id="${t.id}">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 8 6.5 11 13 4.5"/></svg>
+        </button>
+        <div class="gt-today-info">
+          <span class="gt-today-title" style="${t.status==='done'?'text-decoration:line-through;opacity:0.45':''}">${gtRecBadge(t)}${gtEsc(t.title)}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+            ${t.dueTime?`<span class="gt-today-time">${t.dueTime}</span>`:''}
+            ${tagChips}
           </div>
-          ${gtPrioBadge(t.priority)}
-        </div>`;
-      }).join('');
+        </div>
+        ${gtPrioBadge(t.priority)}
+      </div>`;
+    };
+
+    let html = '';
+    if (todayTasks.length === 0 && undatedTasks.length === 0) {
+      html = '<p style="color:var(--text-secondary);font-size:0.84rem;padding:0.5rem 0">Sin tareas para hoy</p>';
+    } else {
+      html = todayTasks.map(buildItem).join('');
+      if (undatedTasks.length > 0) {
+        html += `<div class="gt-today-sep">${todayTasks.length > 0 ? 'Sin fecha' : 'Sin fecha asignada'}</div>`;
+        html += undatedTasks.map(buildItem).join('');
+      }
+    }
+    todayEl.innerHTML = html;
 
     todayEl.querySelectorAll('.gt-today-item').forEach(el=>{
       el.addEventListener('click', e=>{ if (!e.target.closest('.gt-check')) gtOpenModal(el.dataset.id); });
@@ -1085,6 +1098,11 @@ function gtRenderHoy() {
     }).join('');
     weekEl.innerHTML=`<div class="gt-weekly-summary"><span class="gt-weekly-pct">${wkPct}%</span><span class="gt-weekly-sub">${wkDone} de ${wkTotal} completadas</span></div>
       <div class="gt-day-bars">${bars}</div>`;
+    weekEl.querySelectorAll('.gt-day-bar').forEach((bar, i) => {
+      bar.style.cursor='pointer';
+      bar.title=`Ver ${gtFmtLong(wk[i])} en Calendario`;
+      bar.addEventListener('click', () => { gtCalBase=wk[i]; gtSwitchTab('calendario'); });
+    });
   }
 
   // Projects — compact rows
@@ -1124,7 +1142,7 @@ function gtRenderHoy() {
 // ── Tab: Lista / Kanban ───────────────────────────────────────────────────────
 
 let gtListView = 'list';
-const gtFilters = { search:'', project:'', status:'', tag:'' };
+const gtFilters = { search:'', project:'', status:'', tag:'', priority:'' };
 
 function gtRefreshProjectFilter(el) {
   if (!el) return;
@@ -1144,8 +1162,11 @@ function gtGetFiltered() {
   let list=GT.tasks();
   if (gtFilters.search) { const s=gtFilters.search.toLowerCase(); list=list.filter(t=>t.title.toLowerCase().includes(s)); }
   if (gtFilters.project) list=list.filter(t=>t.projectId===gtFilters.project);
-  if (gtFilters.status)  list=list.filter(t=>t.status===gtFilters.status);
-  if (gtFilters.tag)     list=list.filter(t=>(t.tags||[]).includes(gtFilters.tag));
+  if (gtFilters.status==='overdue') list=list.filter(t=>t.dueDate&&t.dueDate<gtToday()&&t.status!=='done');
+  else if (gtFilters.status) list=list.filter(t=>t.status===gtFilters.status);
+  if (gtFilters.tag) list=list.filter(t=>(t.tags||[]).includes(gtFilters.tag));
+  if (gtFilters.priority==='high') list=list.filter(t=>t.priority==='critical'||t.priority==='high');
+  else if (gtFilters.priority) list=list.filter(t=>t.priority===gtFilters.priority);
   return list;
 }
 
@@ -1216,12 +1237,33 @@ function gtRenderKanban() {
 
 let gtCalBase = null;
 
+function gtRenderCalUndated() {
+  const el = document.getElementById('gt-cal-undated');
+  if (!el) return;
+  const undated = GT.tasks()
+    .filter(t => !t.dueDate && t.status !== 'done')
+    .sort((a,b) => (GT_PRIO_ORDER[a.priority]??2)-(GT_PRIO_ORDER[b.priority]??2));
+  if (undated.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="gt-cal-time-label" style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">Sin<br>fecha</div>'
+    + '<div class="gt-undated-wrap">'
+    + undated.map(t => {
+        const p = GT.getProject(t.projectId), color = p ? p.color : '#1a1a1a';
+        return `<div class="gt-cal-event" data-id="${t.id}" style="background:${color}20;border-left:3px solid ${color};color:${color}">${gtEsc(t.title)}</div>`;
+      }).join('')
+    + '</div>';
+  el.querySelectorAll('.gt-cal-event').forEach(ev =>
+    ev.addEventListener('click', e => { e.stopPropagation(); gtOpenModal(ev.dataset.id); })
+  );
+}
+
 function gtRenderCal() {
   const wk=gtWeekDates(gtCalBase);
   const lbl=document.getElementById('gt-cal-label');
   if (lbl) lbl.textContent=`${gtFmtShort(wk[0])} – ${gtFmtShort(wk[6])}`;
   gtRenderCalHeaders(wk);
   gtRenderCalAllDay(wk);
+  gtRenderCalUndated();
   gtRenderCalSlots(wk);
 }
 
@@ -1408,7 +1450,7 @@ function gtRenderTagsTab() {
         <span class="gt-tag-chip" style="background:${tag.color}20;color:${tag.color};border-color:${tag.color}40">${gtEsc(tag.name)}</span>
       </div>
       <div class="cfg-item-right">
-        <span class="cfg-item-count">${count} ${count===1?'tarea':'tareas'}</span>
+        <span class="cfg-item-count gt-nav-count" data-tag-nav="${tag.id}" title="Ver tareas con esta etiqueta">${count} ${count===1?'tarea':'tareas'}</span>
         <button class="cfg-icon-btn" data-edit="${tag.id}" title="Editar">${editSvg}</button>
         <button class="cfg-icon-btn cfg-del" data-del="${tag.id}" title="Eliminar">${delSvg}</button>
       </div>
@@ -1416,6 +1458,9 @@ function gtRenderTagsTab() {
   }).join('');
   listEl.querySelectorAll('[data-edit]').forEach(el=>{
     el.addEventListener('click',()=>gtOpenTagModal(el.dataset.edit,'tag'));
+  });
+  listEl.querySelectorAll('[data-tag-nav]').forEach(el=>{
+    el.addEventListener('click',()=>gtNavigateToLista({tag:el.dataset.tagNav}));
   });
   listEl.querySelectorAll('.cfg-del[data-del]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -1446,7 +1491,7 @@ function gtRenderProjectsSection() {
         <span class="gt-tag-chip" style="background:${p.color}20;color:${p.color};border-color:${p.color}40">${gtEsc(p.name)}</span>
       </div>
       <div class="cfg-item-right">
-        <span class="cfg-item-count">${count} tar.</span>
+        <span class="cfg-item-count gt-nav-count" data-proj-nav="${p.id}" title="Ver tareas de este proyecto">${count} tar.</span>
         <button class="cfg-icon-btn" data-edit-proj="${p.id}" title="Editar">${editIcon}</button>
         <button class="cfg-icon-btn cfg-del" data-del-proj="${p.id}" title="Eliminar">${delIcon}</button>
       </div>
@@ -1454,6 +1499,9 @@ function gtRenderProjectsSection() {
   }).join('');
   listEl.querySelectorAll('[data-edit-proj]').forEach(el=>{
     el.addEventListener('click',()=>gtOpenTagModal(el.dataset.editProj,'project'));
+  });
+  listEl.querySelectorAll('[data-proj-nav]').forEach(el=>{
+    el.addEventListener('click',()=>gtNavigateToLista({project:el.dataset.projNav}));
   });
   listEl.querySelectorAll('[data-del-proj]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -1486,7 +1534,7 @@ function gtRenderPrioritySection() {
       <div class="cfg-item-left">
         <input type="color" class="cfg-prio-dot" data-prio="${p.key}" value="${color}" title="Cambiar color">
         <span class="cfg-item-name">${p.label}</span>
-        <span class="gt-badge" id="cfg-pp-${p.key}" style="background:${color}1c;color:${color}">${p.label}</span>
+        <span class="gt-badge gt-nav-count" id="cfg-pp-${p.key}" data-prio-nav="${p.key}" style="background:${color}1c;color:${color}" title="Ver tareas con esta prioridad">${p.label}</span>
       </div>
       <div class="cfg-item-right">
         <span class="cfg-prio-hex" id="cfg-ph-${p.key}">${color}</span>
@@ -1503,6 +1551,9 @@ function gtRenderPrioritySection() {
       if(hexEl) hexEl.textContent=color;
       gtRefreshPanel();
     });
+  });
+  el.querySelectorAll('[data-prio-nav]').forEach(badge=>{
+    badge.addEventListener('click',()=>gtNavigateToLista({priority:badge.dataset.prioNav}));
   });
 }
 
@@ -1694,6 +1745,20 @@ function gtCloseCmd() { document.getElementById('gt-cmd-overlay')?.classList.rem
 
 let gtActiveTab = 'hoy';
 
+function gtNavigateToLista({ search='', project='', status='', tag='', priority='' } = {}) {
+  gtFilters.search=search; gtFilters.project=project;
+  gtFilters.status=status; gtFilters.tag=tag; gtFilters.priority=priority;
+  gtSwitchTab('lista');
+  const searchEl=document.getElementById('gt-search');
+  const tagEl=document.getElementById('gt-filter-tag');
+  const statusEl=document.getElementById('gt-filter-status');
+  const prioEl=document.getElementById('gt-filter-priority');
+  if(searchEl) searchEl.value=search;
+  if(tagEl) tagEl.value=tag;
+  if(statusEl) statusEl.value=status;
+  if(prioEl) prioEl.value=priority;
+}
+
 function gtSwitchTab(name) {
   document.querySelectorAll('.gt-tab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.gt-tab-content').forEach(c=>c.classList.remove('active'));
@@ -1701,7 +1766,15 @@ function gtSwitchTab(name) {
   document.getElementById(`gt-tab-${name}`)?.classList.add('active');
   gtActiveTab=name;
   if (name==='hoy')        gtRenderHoy();
-  if (name==='lista')      { gtRefreshProjectFilter(document.getElementById('gt-filter-project')); gtRefreshTagFilter(document.getElementById('gt-filter-tag')); gtRenderLista(); }
+  if (name==='lista') {
+    gtRefreshProjectFilter(document.getElementById('gt-filter-project'));
+    gtRefreshTagFilter(document.getElementById('gt-filter-tag'));
+    const statusEl=document.getElementById('gt-filter-status');
+    const prioEl=document.getElementById('gt-filter-priority');
+    if(statusEl) statusEl.value=gtFilters.status;
+    if(prioEl) prioEl.value=gtFilters.priority;
+    gtRenderLista();
+  }
   if (name==='calendario') { gtCalBase=gtCalBase||gtToday(); gtRenderCal(); }
   if (name==='etiquetas')  { gtRenderTagsTab(); gtRenderProjectsSection(); gtRenderPrioritySection(); }
 }
@@ -1719,17 +1792,40 @@ function gtInit() {
 
   // Tabs
   document.querySelectorAll('.gt-tab').forEach(btn=>{
-    btn.addEventListener('click',()=>gtSwitchTab(btn.dataset.tab));
+    btn.addEventListener('click',()=>{
+      if (btn.dataset.tab === 'lista') {
+        gtFilters.search=''; gtFilters.project=''; gtFilters.status=''; gtFilters.tag=''; gtFilters.priority='';
+        const searchEl=document.getElementById('gt-search');
+        if(searchEl) searchEl.value='';
+      }
+      gtSwitchTab(btn.dataset.tab);
+    });
   });
 
   // New task button
   document.getElementById('gt-new-task')?.addEventListener('click',()=>gtOpenModal());
   document.getElementById('db-add-today')?.addEventListener('click',()=>gtOpenModal(null,{dueDate:gtToday()}));
 
+  // Dashboard stat card navigation
+  document.getElementById('db-stat-week')?.addEventListener('click',()=>{ gtCalBase=gtCalBase||gtToday(); gtSwitchTab('calendario'); });
+  document.getElementById('db-stat-urgent')?.addEventListener('click',()=>gtNavigateToLista({priority:'high'}));
+  document.getElementById('db-stat-overdue')?.addEventListener('click',()=>gtNavigateToLista({status:'overdue'}));
+
+  // Dashboard quick nav links
+  document.getElementById('db-nav-tareas')?.addEventListener('click',()=>{
+    gtFilters.search=''; gtFilters.project=''; gtFilters.status=''; gtFilters.tag=''; gtFilters.priority='';
+    const searchEl=document.getElementById('gt-search');
+    if(searchEl) searchEl.value='';
+    gtSwitchTab('lista');
+  });
+  document.getElementById('db-nav-calendario')?.addEventListener('click',()=>{ gtCalBase=gtCalBase||gtToday(); gtSwitchTab('calendario'); });
+  document.getElementById('db-nav-configuraciones')?.addEventListener('click',()=>gtSwitchTab('etiquetas'));
+
   // Lista toolbar
   document.getElementById('gt-search')?.addEventListener('input',e=>{gtFilters.search=e.target.value;gtRenderLista();});
   document.getElementById('gt-filter-project')?.addEventListener('change',e=>{gtFilters.project=e.target.value;gtRenderLista();});
   document.getElementById('gt-filter-tag')?.addEventListener('change',e=>{gtFilters.tag=e.target.value;gtRenderLista();});
+  document.getElementById('gt-filter-priority')?.addEventListener('change',e=>{gtFilters.priority=e.target.value;gtRenderLista();});
   document.getElementById('gt-filter-status')?.addEventListener('change',e=>{gtFilters.status=e.target.value;gtRenderLista();});
   document.getElementById('gt-btn-list')?.addEventListener('click',()=>{
     gtListView='list'; document.getElementById('gt-btn-list')?.classList.add('active'); document.getElementById('gt-btn-kanban')?.classList.remove('active'); gtRenderLista();
@@ -1767,6 +1863,13 @@ function gtInit() {
   // Configuraciones tab
   document.getElementById('gt-new-tag')?.addEventListener('click',()=>gtOpenTagModal(null,'tag'));
   document.getElementById('cfg-new-project')?.addEventListener('click',()=>gtOpenTagModal(null,'project'));
+  document.getElementById('cfg-clear-tasks')?.addEventListener('click',()=>{
+    if(confirm('¿Borrar TODAS las tareas? Esta acción no se puede deshacer.')){
+      GT.saveTasks([]);
+      gtRefreshPanel();
+      gtRenderHoy();
+    }
+  });
 
   // Tag editor modal
   document.getElementById('gt-tag-modal-close')?.addEventListener('click',gtCloseTagModal);
