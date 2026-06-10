@@ -40,12 +40,15 @@ if missing_vars:
 custom_csv_path = sys.argv[1] if len(sys.argv) > 1 else None
 try:
     df = transformar_df(custom_csv_path)
+except ValueError as e:
+    logging.error(str(e))
+    sys.exit(1)
 except Exception as e:
-    logging.error(f"Ocurrió un error inesperado al transformar el archivo CSV: {e}")
+    logging.error(f"Error inesperado al leer el archivo CSV: {e}")
     sys.exit(1)
 
 if df is None or df.empty:
-    logging.error("El DataFrame transformado está vacío o no se pudo generar a partir del archivo CSV.")
+    logging.error("No se encontraron datos en el archivo CSV.")
     sys.exit(1)
 
 def clean_val(val):
@@ -859,8 +862,12 @@ def run(playwright: Playwright) -> None:
             err_str = str(e).lower()
             is_sku_existente = "sku_existente" in err_str or any(k in err_str for k in ["ya existe", "duplicado", "existe", "registrado", "ak_articulossku", "unique key"])
             is_timeout = "timeout" in err_str or "time out" in err_str
-            
-            if is_sku_existente:
+            is_key_error = isinstance(e, KeyError)
+
+            if is_key_error:
+                col_name = str(e).strip("'\"")
+                motivo_err = f"La columna '{col_name}' no se encuentra en el archivo CSV. Verifica el encabezado."
+            elif is_sku_existente:
                 motivo_err = "El SKU ya existe en el sistema."
             elif is_timeout:
                 motivo_err = f"Time Out: Un campo posiblemente está mal escrito o no se encontró la opción requerida. Detalles: {str(e).strip()}"
@@ -875,7 +882,7 @@ def run(playwright: Playwright) -> None:
             if "target page, context or browser has been closed" in err_str:
                 raise Exception("Navegador o página cerrados inesperadamente.")
             # Si es un error recuperable o no es el último registro, intentamos restablecer la interfaz para el siguiente
-            if is_sku_existente or is_timeout or index < len(df) - 1:
+            if is_sku_existente or is_timeout or is_key_error or index < len(df) - 1:
                 try:
                     reset_to_clean_form(page)
                 except Exception as reset_err:

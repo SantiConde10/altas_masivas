@@ -8,24 +8,28 @@ def transformar_df(custom_path=None):
     # Buscar cualquier archivo CSV en la carpeta data/
     # Calculamos la ruta relativa a la raíz del proyecto (alta_masiva)
     data_dir = Path(__file__).parent.parent / "data"
-    
+
     try:
         if custom_path:
             archivo_path = Path(custom_path)
         else:
             csv_files = list(data_dir.glob("*.csv"))
             if not csv_files:
-                logging.error(f"No se encontró ningún archivo .csv en la ruta {data_dir}")
-                return None
-            
+                raise ValueError("No se encontró ningún archivo CSV en la carpeta.")
+
             # Usamos el primer CSV encontrado
             archivo_path = csv_files[0]
-            
+
         logging.info(f"Leyendo archivo de datos: {archivo_path.name}")
         df = pd.read_csv(archivo_path, skiprows=2, keep_default_na=False)
+
+        if df.empty:
+            raise ValueError("El archivo no contiene datos. Verifica que el CSV tenga filas con información.")
+
+    except ValueError:
+        raise
     except Exception as e:
-        logging.error(f"Error inesperado al leer el archivo CSV: {e}")
-        return None
+        raise ValueError(f"No se pudo leer el archivo CSV. Verifica que el formato sea correcto. Detalle: {e}")
 
     # 2. Transformación de columnas y creación de Grupo
     def calcular_peso_volumetrico(row):
@@ -44,11 +48,10 @@ def transformar_df(custom_path=None):
         df['Grupo'] = df['SKU'].replace('', None).ffill()
         df['PESO VOLUMÉTRICO'] = df.apply(calcular_peso_volumetrico, axis=1)
     except KeyError as e:
-        logging.error(f"Columna requerida no encontrada para la transformación ('Agregar SKU', 'Cantidad' o 'PROVEEDOR'): {e}")
-        return None
+        col_name = str(e).strip("'\"")
+        raise ValueError(f"La columna '{col_name}' no se encuentra en el archivo. Verifica el encabezado del CSV.")
     except Exception as e:
-        logging.error(f"Error durante la transformación de columnas: {e}")
-        return None
+        raise ValueError(f"Error durante la transformación del archivo: {e}")
 
     def consolidar_jsons(subset):
         resultado_dict = {}
@@ -61,26 +64,27 @@ def transformar_df(custom_path=None):
     try:
         consolidados = df.groupby('Grupo').apply(consolidar_jsons)
         df['group_SKU'] = df['Grupo'].map(consolidados)
-        
+
         df['PROVEEDOR'] = df['PROVEEDOR'].replace('', pd.NA)
         df['SKU'] = df['SKU'].replace('', pd.NA)
         df['DESCRIPCION'] = df['DESCRIPCION'].replace('', pd.NA)
         df.dropna(subset=['PROVEEDOR', 'SKU', 'DESCRIPCION'], how='all', inplace=True)
-        
+
         df.drop(columns=["dict_row"], inplace=True)
         df.reset_index(drop=True, inplace=True)
-        
+
         if 'Columna_Control' in df.columns:
             df = df.drop(columns=['Columna_Control'])
-            
+
         df_final = df.fillna('')
+    except KeyError as e:
+        col_name = str(e).strip("'\"")
+        raise ValueError(f"La columna '{col_name}' no se encuentra en el archivo. Verifica el encabezado del CSV.")
     except Exception as e:
-        logging.error(f"Error al agrupar los datos: {e}")
-        return None
+        raise ValueError(f"Error al procesar los datos del archivo: {e}")
 
-    try:
-        logging.info(f"Se cargaran {df_final.shape[0]} proveedores")
-    except Exception as e:
-        logging.error(f"Error al procesar el resultado final: {e}")
+    if df_final.empty:
+        raise ValueError("No se encontraron datos válidos en el archivo. Verifica que el CSV tenga filas con información.")
 
+    logging.info(f"Se cargaran {df_final.shape[0]} proveedores")
     return df_final

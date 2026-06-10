@@ -9,22 +9,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def validate_csv(file_path):
-    # Silenciamos los logs informativos para no ensuciar el stdout 
+    # Silenciamos los logs informativos para no ensuciar el stdout
     # ya que la app de Electron espera un string exacto ("OK")
     logging.getLogger().setLevel(logging.ERROR)
     from lectura_csv import transformar_df
     try:
         df = transformar_df(file_path)
-        if df is not None and len(df) > 0:
-            import math
-            estimado_minutos = math.ceil((len(df) * 23) / 60)
-            print(f"OK|{estimado_minutos}")
-            sys.exit(0)
-        else:
-            print("Error: El archivo no contiene datos validos o fallo la transformacion.")
-            sys.exit(1)
+        import math
+        estimado_minutos = math.ceil((len(df) * 23) / 60)
+        print(f"OK|{estimado_minutos}")
+        sys.exit(0)
+    except ValueError as e:
+        print(str(e))
+        sys.exit(1)
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error inesperado al validar el archivo: {e}")
         sys.exit(1)
 
 def run_script(file_path):
