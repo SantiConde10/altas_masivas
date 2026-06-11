@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Alta Masiva Logic
+  // SKU Upload Logic
   const runBtn = document.getElementById('run-btn');
   const btnText = document.getElementById('btn-text');
   const statusIndicator = document.getElementById('status-indicator');
