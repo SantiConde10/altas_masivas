@@ -23,15 +23,15 @@ else:
 
 load_dotenv(dotenv_path)
 
-usuario = os.getenv("USUARIO")
-password = os.getenv("PASSWORD")
-url_gaia = os.getenv("URL")
+usuario = os.getenv("APP_USERNAME")
+password = os.getenv("APP_PASSWORD")
+url_gaia = os.getenv("APP_URL")
 
 # Validar variables de entorno requeridas
 missing_vars = []
-if not usuario: missing_vars.append("USUARIO")
-if not password: missing_vars.append("PASSWORD")
-if not url_gaia: missing_vars.append("URL")
+if not usuario: missing_vars.append("APP_USERNAME")
+if not password: missing_vars.append("APP_PASSWORD")
+if not url_gaia: missing_vars.append("APP_URL")
 
 if missing_vars:
     logging.error(f"Faltan variables de entorno requeridas en el archivo .env: {', '.join(missing_vars)}")

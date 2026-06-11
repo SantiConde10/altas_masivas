@@ -79,9 +79,9 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
         run: |
           # Crear archivo .env con los secretos de GitHub para empaquetarlo
-          echo "USUARIO=$APP_USERNAME" > .env
-          echo "PASSWORD=$APP_PASSWORD" >> .env
-          echo "URL=$APP_URL" >> .env
+          echo "APP_USERNAME=$APP_USERNAME" > .env
+          echo "APP_PASSWORD=$APP_PASSWORD" >> .env
+          echo "APP_URL=$APP_URL" >> .env
 
           # Activamos entorno virtual y empaquetamos
           source .venv/bin/activate
