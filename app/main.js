@@ -37,6 +37,32 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
   
+  // Manejo de eventos de actualización
+  autoUpdater.on('update-available', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Actualización disponible',
+      message: 'Se ha encontrado una nueva versión de la aplicación. Se está descargando en segundo plano...'
+    });
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Actualización lista',
+      message: 'La actualización se ha descargado y está lista para instalarse. La aplicación se reiniciará.',
+      buttons: ['Reiniciar y Actualizar']
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('Error en autoUpdater:', err);
+  });
+
   // Buscar actualizaciones en segundo plano
   autoUpdater.checkForUpdatesAndNotify();
 });
