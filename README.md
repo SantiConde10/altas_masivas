@@ -85,3 +85,9 @@ El proyecto automatiza la compilación con GitHub Actions, pero para compilar lo
    npm run build:mac  # Para macOS
    ```
    El resultado se generará en `app/dist/`.
+
+### Para abrir la aplicacion en macOS:
+
+```bash
+sudo xattr -rd com.apple.quarantine /Applications/GAIA\ Automatizaciones.app 
+```
