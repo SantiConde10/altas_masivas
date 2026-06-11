@@ -72,6 +72,8 @@ app.on('window-all-closed', function () {
 });
 
 // Handle opening a native file selection dialog
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 ipcMain.handle('select-csv-file', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],

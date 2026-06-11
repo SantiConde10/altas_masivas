@@ -23,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   gtInit();
   rpInit();
 
+  // Load App Version
+  window.electronAPI.getAppVersion().then(version => {
+    const versionEl = document.querySelector('.version');
+    if (versionEl) {
+      versionEl.textContent = `v${version}`;
+    }
+  }).catch(err => console.error('Error fetching version:', err));
+
   // Splash Screen Transition
   const splashScreen = document.getElementById('splash-screen');
   const appLayout = document.getElementById('app-layout');

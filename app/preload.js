@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onPythonError: (callback) => ipcRenderer.on('python-error', (_event, value) => callback(value)),
   onPythonFinished: (callback) => ipcRenderer.on('python-finished', (_event, value) => callback(value)),
   selectCSVFile: () => ipcRenderer.invoke('select-csv-file'),
-  validateCSVFile: (filePath) => ipcRenderer.invoke('validate-csv-file', filePath)
+  validateCSVFile: (filePath) => ipcRenderer.invoke('validate-csv-file', filePath),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

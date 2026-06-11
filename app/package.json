@@ -1,6 +1,6 @@
 {
   "name": "gaia-alta-masiva",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Aplicación de escritorio para la carga masiva de artículos en GAIA",
   "main": "main.js",
   "scripts": {
@@ -34,7 +34,10 @@
       }
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.png"
     },
     "win": {
