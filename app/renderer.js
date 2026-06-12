@@ -531,7 +531,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tdStatus = document.createElement('td');
       tdStatus.style.padding = '10px';
       tdStatus.style.borderBottom = '1px solid var(--border-color)';
-      tdStatus.innerHTML = `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: ${statusBg}; color: ${statusColor};">${statusText}</span>`;
+      const statusSpan = document.createElement('span');
+      statusSpan.style.padding = '2px 8px';
+      statusSpan.style.borderRadius = '12px';
+      statusSpan.style.fontSize = '0.75rem';
+      statusSpan.style.fontWeight = '600';
+      statusSpan.style.background = statusBg;
+      statusSpan.style.color = statusColor;
+      statusSpan.textContent = statusText;
+      tdStatus.appendChild(statusSpan);
 
       const tdSku = document.createElement('td');
       tdSku.style.padding = '10px';

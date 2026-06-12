@@ -2,12 +2,13 @@ import re
 import time
 import os
 from playwright.sync_api import Playwright, sync_playwright, expect
-from dotenv import load_dotenv
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-load_dotenv("secrets/.env")
+# TODO: Use Config from cli.py in production
+# Credentials should be injected via environment or configuration management system
+# DO NOT load from secrets/.env file - use proper credential management
 
 usuario = os.getenv("USUARIO")
 password = os.getenv("PASSWORD")

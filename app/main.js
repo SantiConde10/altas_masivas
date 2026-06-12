@@ -129,8 +129,10 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('error', (err) => {
-    console.error('[AutoUpdater] Error:', err);
-    console.error('[AutoUpdater] Stack:', err.stack);
+    console.error('[AutoUpdater] Error:', err.message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[AutoUpdater] Stack:', err.stack);
+    }
   });
 
   autoUpdater.on('checking-for-update', () => {
