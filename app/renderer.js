@@ -8,6 +8,29 @@ async function loadPanel(id, htmlPath) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Listen for auto-update progress
+  if (window.electronAPI.onUpdateProgress) {
+    window.electronAPI.onUpdateProgress((progress) => {
+      const overlay = document.getElementById('update-progress-overlay');
+      const fill = document.getElementById('update-progress-fill');
+      const percent = document.getElementById('update-progress-percent');
+      const speed = document.getElementById('update-progress-speed');
+
+      if (overlay && fill && percent && speed) {
+        overlay.classList.add('visible');
+
+        const percentValue = Math.round(progress.percent || 0);
+        fill.style.width = percentValue + '%';
+        percent.textContent = percentValue + '%';
+
+        if (progress.bytesPerSecond) {
+          const mb = (progress.bytesPerSecond / 1024 / 1024).toFixed(2);
+          speed.textContent = mb + ' MB/s';
+        }
+      }
+    });
+  }
+
   // Cargar paneles dinámicamente
   try {
     await Promise.all([

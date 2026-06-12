@@ -37,40 +37,86 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
   
-  // Autenticación para descargar actualizaciones de un repositorio privado
+  // Configurar electron-updater explícitamente
   const ghToken = "%%GH_TOKEN%%";
-  if (ghToken && ghToken !== "%%" + "GH_TOKEN" + "%%") {
+  const isTokenValid = ghToken && ghToken !== "%%" + "GH_TOKEN" + "%%";
+
+  if (isTokenValid) {
     autoUpdater.requestHeaders = { "Authorization": `Bearer ${ghToken}` };
+    console.log('[AutoUpdater] Token GH configurado');
+  } else {
+    console.warn('[AutoUpdater] Token GH no inyectado (ambiente dev?)');
   }
 
+  // Configurar repositorio explícitamente
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'SantiConde10',
+    repo: 'altas_masivas',
+    releaseType: 'release'
+  });
+
+  let updateWindow = null;
+
   // Manejo de eventos de actualización
-  autoUpdater.on('update-available', () => {
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Actualización disponible:', info);
     dialog.showMessageBox({
       type: 'info',
       title: 'Actualización disponible',
-      message: 'Se ha encontrado una nueva versión de la aplicación. Se está descargando en segundo plano...'
+      message: `Nueva versión ${info.version} disponible. Se está descargando en segundo plano...`
     });
   });
 
-  autoUpdater.on('update-downloaded', () => {
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`[AutoUpdater] Descarga: ${Math.round(progress.percent)}%`);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-progress', {
+        percent: progress.percent,
+        bytesPerSecond: progress.bytesPerSecond,
+        total: progress.total,
+        transferred: progress.transferred
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Actualización descargada:', info);
     dialog.showMessageBox({
       type: 'info',
       title: 'Actualización lista',
-      message: 'La actualización se ha descargado y está lista para instalarse. La aplicación se reiniciará.',
-      buttons: ['Reiniciar y Actualizar']
+      message: `Versión ${info.version} está lista para instalar. La aplicación se reiniciará.`,
+      buttons: ['Reiniciar y Actualizar', 'Más tarde']
     }).then((result) => {
       if (result.response === 0) {
+        console.log('[AutoUpdater] Usuario confirmó instalación');
         autoUpdater.quitAndInstall();
       }
     });
   });
 
   autoUpdater.on('error', (err) => {
-    console.error('Error en autoUpdater:', err);
+    console.error('[AutoUpdater] Error:', err);
+    console.error('[AutoUpdater] Stack:', err.stack);
   });
 
-  // Buscar actualizaciones en segundo plano
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[AutoUpdater] Verificando actualizaciones...');
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('[AutoUpdater] Ya está en la versión más reciente');
+  });
+
+  // Buscar actualizaciones al iniciar
+  console.log('[AutoUpdater] Iniciando búsqueda de actualizaciones');
   autoUpdater.checkForUpdatesAndNotify();
+
+  // Reintentar cada hora
+  setInterval(() => {
+    console.log('[AutoUpdater] Reintentando búsqueda de actualizaciones');
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 60 * 60 * 1000);
 });
 
 app.on('window-all-closed', function () {
