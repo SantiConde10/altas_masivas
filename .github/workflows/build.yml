@@ -97,6 +97,12 @@ jobs:
         working-directory: ./app
         run: npm install
 
+      - name: Inject GH_TOKEN for AutoUpdater
+        working-directory: ./app
+        env:
+          MY_GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: sed -i '' "s|%%GH_TOKEN%%|${MY_GH_TOKEN}|g" main.js
+
       - name: Build and Publish Electron App
         working-directory: ./app
         env:

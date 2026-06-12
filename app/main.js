@@ -37,6 +37,12 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
   
+  // Autenticación para descargar actualizaciones de un repositorio privado
+  const ghToken = "%%GH_TOKEN%%";
+  if (ghToken && ghToken !== "%%" + "GH_TOKEN" + "%%") {
+    autoUpdater.requestHeaders = { "Authorization": `Bearer ${ghToken}` };
+  }
+
   // Manejo de eventos de actualización
   autoUpdater.on('update-available', () => {
     dialog.showMessageBox({
