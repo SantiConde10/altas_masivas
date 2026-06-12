@@ -44,6 +44,13 @@ jobs:
         run: |
           git tag ${{ needs.check_version.outputs.version }}
           git push origin ${{ needs.check_version.outputs.version }}
+      - name: Create Empty Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ needs.check_version.outputs.version }} \
+            --title "${{ needs.check_version.outputs.version }}" \
+            --notes "Release ${{ needs.check_version.outputs.version }}" || true
 
   build:
     needs: [check_version, create_tag]
@@ -103,11 +110,23 @@ jobs:
         working-directory: ./app
         run: npm install
 
-      - name: Build and Publish Electron App
+      - name: Build Electron App
         working-directory: ./app
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           EP_DRAFT: "false"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run build:mac -- -p always
+        run: npm run build:mac -- -p never
         shell: bash
+
+      - name: Upload Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd ./app/dist
+          gh release upload ${{ needs.check_version.outputs.version }} \
+            GAIA*.dmg \
+            GAIA*.zip \
+            *.blockmap \
+            latest-mac.yml \
+            --repo SantiConde10/altas_masivas \
+            --clobber || true
