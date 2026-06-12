@@ -421,6 +421,10 @@
   color: #93c5fd;
 }
 
+.log-entry.warning {
+  color: #fbbf24;
+}
+
 .logs-container::-webkit-scrollbar {
   width: 6px;
 }

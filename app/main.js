@@ -136,6 +136,28 @@ ipcMain.handle('check-updates-electron', async () => {
     logs.push(`[${new Date().toLocaleTimeString()}] Iniciando verificación con electron-updater...`);
     logs.push(`Versión actual: ${app.getVersion()}`);
     logs.push(`Repositorio: SantiConde10/altas_masivas`);
+    logs.push(`Plataforma: ${process.platform}`);
+    logs.push(`Empaquetada: ${app.isPackaged}`);
+
+    // Check if this will work on current platform
+    if (process.platform === 'linux' && !app.isPackaged) {
+      logs.push(`\n⚠️  NOTA: En Linux durante desarrollo, electron-updater necesita que la app esté`);
+      logs.push(`empaquetada como AppImage. Para testing, usa el método de GitHub API.`);
+      logs.push(`\nError esperado: APPIMAGE env is not defined`);
+      logs.push(`Razón: En desarrollo, electron-updater no puede acceder a GitHub releases.`);
+      return resolve({
+        success: false,
+        logs,
+        availableVersion: null,
+        warning: 'Método no disponible en Linux durante desarrollo. Usa GitHub API.',
+        error: 'APPIMAGE not available in development mode'
+      });
+    }
+
+    if (process.platform === 'win32' && !app.isPackaged) {
+      logs.push(`\n⚠️  NOTA: En Windows durante desarrollo, electron-updater puede tener limitaciones.`);
+      logs.push(`Para testing en desarrollo, usa el método de GitHub API.`);
+    }
 
     // Clear previous listeners to avoid duplicates
     autoUpdater.removeAllListeners('update-available');
@@ -154,6 +176,8 @@ ipcMain.handle('check-updates-electron', async () => {
 
     autoUpdater.once('update-available', (info) => {
       if (resolved) return;
+      resolved = true;
+      clearTimeout(timeout);
       logs.push(`✓ Actualización disponible: ${info.version}`);
       logs.push(`Archivo: ${info.files?.[0]?.url || 'No especificado'}`);
       logs.push(`Tamaño: ${info.files?.[0]?.size ? (info.files[0].size / 1024 / 1024).toFixed(2) + ' MB' : 'No disponible'}`);
@@ -175,6 +199,14 @@ ipcMain.handle('check-updates-electron', async () => {
       resolved = true;
       clearTimeout(timeout);
       logs.push(`✗ Error: ${err.message}`);
+
+      // Provide helpful error messages
+      if (err.message.includes('APPIMAGE')) {
+        logs.push(`\nEsta es una limitación de electron-updater en Linux sin AppImage.`);
+        logs.push(`En producción (empaquetada como AppImage) funcionará correctamente.`);
+        logs.push(`Para testing ahora, usa el método de GitHub API.`);
+      }
+
       logs.push(`Stack: ${err.stack}`);
       resolve({ success: false, logs, availableVersion: null, error: err.message });
     });

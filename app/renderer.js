@@ -1766,7 +1766,9 @@ function initValidationPanel() {
       // Add logs from result
       if (result.logs && Array.isArray(result.logs)) {
         result.logs.forEach(log => {
-          const type = log.includes('✓') ? 'success' : log.includes('✗') ? 'error' : 'info';
+          const type = log.includes('✓') ? 'success' :
+                      log.includes('✗') ? 'error' :
+                      log.includes('⚠️') || log.includes('⚠') ? 'warning' : 'info';
           addLog(log, type);
         });
       }
@@ -1775,7 +1777,12 @@ function initValidationPanel() {
       const statusEl = document.getElementById('update-status');
       const availableVersionEl = document.getElementById('available-version');
 
-      if (result.success) {
+      if (result.warning) {
+        statusEl.textContent = 'No disponible en dev';
+        statusEl.className = 'status-value status-error';
+        availableVersionEl.textContent = 'Ver GitHub API';
+        addLog(`⚠️ ${result.warning}`, 'warning');
+      } else if (result.success) {
         if (result.availableVersion) {
           statusEl.textContent = 'Actualización disponible';
           statusEl.className = 'status-value status-available';
