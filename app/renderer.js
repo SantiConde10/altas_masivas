@@ -13,15 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([
       loadPanel('home-view', 'panels/home/home.html'),
       loadPanel('alta-masiva-view', 'panels/alta-masiva/alta-masiva.html'),
-      loadPanel('tareas-view', 'panels/tareas/tareas.html'),
-      loadPanel('reportes-view', 'panels/reportes/reportes.html')
+      loadPanel('tareas-view', 'panels/tareas/tareas.html')
     ]);
   } catch (error) {
     console.error('Error cargando paneles:', error);
   }
 
   gtInit();
-  rpInit();
 
   // Load App Version
   window.electronAPI.getAppVersion().then(version => {
@@ -438,18 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Guardar reporte en historial
-    if (totalRows > 0 || allResults.length > 0) {
-      rpSaveReport({
-        fileName: selectedFilePath ? selectedFilePath.split(/[/\\]/).pop() : 'Desconocido',
-        total: totalRows || allResults.length,
-        success: successRows,
-        existing: existingRows,
-        errors: errorRows,
-        exitCode: code,
-        results: allResults.slice()
-      });
-    }
   });
 
   // Funciones para la tabla de resultados
@@ -527,226 +513,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REPORTES
-// ─────────────────────────────────────────────────────────────────────────────
-
-function rpId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-function rpReports() {
-  return JSON.parse(localStorage.getItem('rp_reports') || '[]');
-}
-
-function rpSaveReports(list) {
-  localStorage.setItem('rp_reports', JSON.stringify(list));
-}
-
-function rpSaveReport(data) {
-  const list = rpReports();
-  const statusVal = data.errors > 0 ? 'error' : data.existing > 0 ? 'partial' : 'success';
-  list.unshift({
-    id: rpId(),
-    date: new Date().toISOString(),
-    fileName: data.fileName,
-    total: data.total,
-    success: data.success,
-    existing: data.existing,
-    errors: data.errors,
-    exitCode: data.exitCode,
-    status: statusVal,
-    results: data.results || []
-  });
-  rpSaveReports(list);
-  rpRender();
-}
-
-function rpFmtDate(iso) {
-  const d = new Date(iso);
-  const pad = n => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function rpStatusLabel(s) {
-  return { success: 'Completado', partial: 'Parcial', error: 'Con errores' }[s] || s;
-}
-
-let rpDetailReport = null;
-
-function rpRender() {
-  const list = rpReports();
-  const searchVal = (document.getElementById('rp-search')?.value || '').toLowerCase();
-  const filterVal = document.getElementById('rp-filter-status')?.value || '';
-
-  // Update summary stats
-  const totalRuns = list.length;
-  const totalSkus = list.reduce((a, r) => a + r.total, 0);
-  const totalSuccess = list.reduce((a, r) => a + r.success, 0);
-  const totalErrors = list.reduce((a, r) => a + r.errors, 0);
-
-  const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setEl('rp-stat-runs', totalRuns);
-  setEl('rp-stat-total', totalSkus);
-  setEl('rp-stat-success', totalSuccess);
-  setEl('rp-stat-errors', totalErrors);
-
-  const listEl = document.getElementById('rp-list');
-  const emptyEl = document.getElementById('rp-empty');
-  if (!listEl) return;
-
-  const filtered = list.filter(r => {
-    if (searchVal && !r.fileName.toLowerCase().includes(searchVal)) return false;
-    if (filterVal && r.status !== filterVal) return false;
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    listEl.innerHTML = '';
-    if (emptyEl) listEl.appendChild(emptyEl);
-    emptyEl.style.display = '';
-    return;
-  }
-
-  if (emptyEl) emptyEl.style.display = 'none';
-
-  const delIcon = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 4 13 4"/><path d="M5 4V2h6v2M4 4l1 10h6l1-10"/></svg>`;
-
-  listEl.innerHTML = filtered.map(r => `
-    <div class="rp-card" data-id="${r.id}">
-      <span class="rp-card-status ${r.status}"></span>
-      <div class="rp-card-main">
-        <span class="rp-card-name" title="${r.fileName}">${r.fileName}</span>
-        <span class="rp-card-date">${rpFmtDate(r.date)} · ${rpStatusLabel(r.status)}</span>
-      </div>
-      <div class="rp-card-pills">
-        <span class="rp-pill rp-pill-total">${r.total} total</span>
-        <span class="rp-pill rp-pill-success">${r.success} ok</span>
-        ${r.existing > 0 ? `<span class="rp-pill rp-pill-existing">${r.existing} exist.</span>` : ''}
-        ${r.errors > 0 ? `<span class="rp-pill rp-pill-error">${r.errors} error</span>` : ''}
-      </div>
-      <button class="rp-card-del" data-del="${r.id}" title="Eliminar reporte">${delIcon}</button>
-    </div>
-  `).join('');
-
-  listEl.querySelectorAll('.rp-card').forEach(card => {
-    card.addEventListener('click', e => {
-      if (e.target.closest('.rp-card-del')) return;
-      const report = list.find(r => r.id === card.dataset.id);
-      if (report) rpOpenDetail(report);
-    });
-  });
-
-  listEl.querySelectorAll('.rp-card-del').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      rpSaveReports(rpReports().filter(r => r.id !== btn.dataset.del));
-      rpRender();
-    });
-  });
-}
-
-function rpOpenDetail(report) {
-  rpDetailReport = report;
-
-  const titleEl = document.getElementById('rp-modal-title');
-  const metaEl = document.getElementById('rp-modal-meta');
-  const statsEl = document.getElementById('rp-modal-stats');
-
-  if (titleEl) titleEl.textContent = report.fileName;
-  if (metaEl) metaEl.textContent = rpFmtDate(report.date) + ' · ' + rpStatusLabel(report.status);
-  if (statsEl) {
-    statsEl.innerHTML = `
-      <div class="rp-modal-stat">
-        <span class="rp-modal-stat-num">${report.total}</span>
-        <span class="rp-modal-stat-lbl">Total</span>
-      </div>
-      <div class="rp-modal-stat ms-success">
-        <span class="rp-modal-stat-num">${report.success}</span>
-        <span class="rp-modal-stat-lbl">Subidos con éxito</span>
-      </div>
-      <div class="rp-modal-stat ms-existing">
-        <span class="rp-modal-stat-num">${report.existing}</span>
-        <span class="rp-modal-stat-lbl">Ya existían</span>
-      </div>
-      <div class="rp-modal-stat ms-error">
-        <span class="rp-modal-stat-num">${report.errors}</span>
-        <span class="rp-modal-stat-lbl">Errores</span>
-      </div>
-    `;
-  }
-
-  const searchEl = document.getElementById('rp-detail-search');
-  const filterEl = document.getElementById('rp-detail-filter');
-  if (searchEl) searchEl.value = '';
-  if (filterEl) filterEl.value = '';
-
-  rpRenderDetailTable();
-  document.getElementById('rp-modal-overlay')?.classList.add('rp-visible');
-}
-
-function rpRenderDetailTable() {
-  if (!rpDetailReport) return;
-  const tbody = document.getElementById('rp-detail-tbody');
-  if (!tbody) return;
-
-  const searchVal = (document.getElementById('rp-detail-search')?.value || '').toLowerCase();
-  const filterVal = document.getElementById('rp-detail-filter')?.value || '';
-
-  const rows = rpDetailReport.results.filter(item => {
-    if (filterVal && item.status !== filterVal) return false;
-    if (searchVal && !item.sku.toLowerCase().includes(searchVal)) return false;
-    return true;
-  });
-
-  if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1.5rem;color:var(--text-secondary);font-size:0.85rem">Sin resultados</td></tr>';
-    return;
-  }
-
-  const statusCfg = {
-    'éxito':     { bg: '#d1fae5', color: '#059669', label: 'Éxito' },
-    'existente': { bg: '#fef3c7', color: '#d97706', label: 'Ya Existía' },
-    'fallo':     { bg: '#fee2e2', color: '#dc2626', label: 'Fallo' }
-  };
-
-  tbody.innerHTML = rows.map(item => {
-    const cfg = statusCfg[item.status] || { bg: '#f1f5f9', color: '#64748b', label: item.status };
-    return `<tr>
-      <td><span class="rp-status-badge" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</span></td>
-      <td style="font-weight:500">${item.sku}</td>
-      <td style="color:var(--text-secondary)">${item.reason || ''}</td>
-    </tr>`;
-  }).join('');
-}
-
-function rpCloseDetail() {
-  document.getElementById('rp-modal-overlay')?.classList.remove('rp-visible');
-  rpDetailReport = null;
-}
-
-function rpInit() {
-  document.getElementById('rp-search')?.addEventListener('input', rpRender);
-  document.getElementById('rp-filter-status')?.addEventListener('change', rpRender);
-
-  document.getElementById('rp-clear-all')?.addEventListener('click', () => {
-    if (confirm('¿Borrar todo el historial de reportes? Esta acción no se puede deshacer.')) {
-      rpSaveReports([]);
-      rpRender();
-    }
-  });
-
-  document.getElementById('rp-modal-close')?.addEventListener('click', rpCloseDetail);
-  document.getElementById('rp-modal-overlay')?.addEventListener('click', e => {
-    if (e.target.id === 'rp-modal-overlay') rpCloseDetail();
-  });
-
-  document.getElementById('rp-detail-search')?.addEventListener('input', rpRenderDetailTable);
-  document.getElementById('rp-detail-filter')?.addEventListener('change', rpRenderDetailTable);
-
-  rpRender();
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GESTOR DE TAREAS
