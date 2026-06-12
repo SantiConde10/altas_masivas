@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectCSVFile: () => ipcRenderer.invoke('select-csv-file'),
   validateCSVFile: (filePath) => ipcRenderer.invoke('validate-csv-file', filePath),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (_event, value) => callback(value))
+  onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (_event, value) => callback(value)),
+  checkUpdatesElectron: () => ipcRenderer.invoke('check-updates-electron'),
+  checkUpdatesGithub: (params) => ipcRenderer.invoke('check-updates-github', params)
 });

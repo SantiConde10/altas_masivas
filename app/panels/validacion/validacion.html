@@ -1,0 +1,151 @@
+<div class="validacion-container">
+  <h1>Validación de Actualizaciones</h1>
+  <p class="subtitle">Herramienta de desarrollo para verificar el mecanismo de actualización automática</p>
+
+  <!-- Status Overview -->
+  <div class="status-overview">
+    <div class="status-card">
+      <div class="status-label">Versión Actual</div>
+      <div id="current-version" class="status-value">Cargando...</div>
+    </div>
+    <div class="status-card">
+      <div class="status-label">Versión Disponible</div>
+      <div id="available-version" class="status-value">-</div>
+    </div>
+    <div class="status-card">
+      <div class="status-label">Estado</div>
+      <div id="update-status" class="status-value status-idle">Idle</div>
+    </div>
+  </div>
+
+  <!-- Method Selection Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-method="electron-updater">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 11h6M9 15h6"/></svg>
+      Electron Updater
+    </button>
+    <button class="tab-btn" data-method="github-api">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+        <circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+      GitHub API
+    </button>
+  </div>
+
+  <!-- Electron Updater Tab -->
+  <div class="tab-content active" data-method="electron-updater">
+    <div class="method-section">
+      <h2>Electron Updater</h2>
+      <p class="method-desc">Usa el mecanismo nativo de electron-updater configurado en package.json</p>
+
+      <div class="check-group">
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Verifica los GitHub releases automáticamente</span>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Descarga la actualización en segundo plano</span>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Muestra notificación cuando está lista</span>
+        </div>
+      </div>
+
+      <button id="check-updates-electron" class="action-btn primary">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2-8.94"/></svg>
+        Verificar Actualizaciones
+      </button>
+
+      <div id="electron-output" class="output-section hidden">
+        <div class="output-header">Resultado</div>
+        <div id="electron-log" class="output-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub API Tab -->
+  <div class="tab-content" data-method="github-api">
+    <div class="method-section">
+      <h2>GitHub API</h2>
+      <p class="method-desc">Consulta directamente la API de GitHub usando tu token personal</p>
+
+      <div class="config-section">
+        <div class="config-group">
+          <label for="github-token">Token de GitHub (opcional)</label>
+          <input
+            type="password"
+            id="github-token"
+            placeholder="ghp_xxxxxxxxxxxx"
+            class="config-input"
+          >
+          <small>Si no está configurado, usa la variable GH_TOKEN del sistema</small>
+        </div>
+
+        <div class="config-group">
+          <label for="github-owner">Propietario del Repo</label>
+          <input
+            type="text"
+            id="github-owner"
+            value="SantiConde10"
+            class="config-input"
+          >
+        </div>
+
+        <div class="config-group">
+          <label for="github-repo">Repositorio</label>
+          <input
+            type="text"
+            id="github-repo"
+            value="altas_masivas"
+            class="config-input"
+          >
+        </div>
+      </div>
+
+      <div class="check-group">
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Conexión a la API de GitHub</span>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Obtiene la versión más reciente del release</span>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <span class="check-text">Muestra información detallada del release</span>
+        </div>
+      </div>
+
+      <button id="check-updates-github" class="action-btn primary">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2-8.94"/></svg>
+        Verificar con GitHub API
+      </button>
+
+      <div id="github-output" class="output-section hidden">
+        <div class="output-header">Resultado</div>
+        <div id="github-log" class="output-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Panel -->
+  <div class="logs-panel">
+    <div class="logs-header">
+      <h3>Logs Detallados</h3>
+      <button id="clear-logs" class="clear-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6h16z"/>
+        </svg>
+        Limpiar
+      </button>
+    </div>
+    <div id="logs-container" class="logs-container">
+      <div class="log-entry initial">Sistema listo. Selecciona un método para comenzar.</div>
+    </div>
+  </div>
+</div>

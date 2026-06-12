@@ -36,7 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([
       loadPanel('home-view', 'panels/home/home.html'),
       loadPanel('alta-masiva-view', 'panels/alta-masiva/alta-masiva.html'),
-      loadPanel('tareas-view', 'panels/tareas/tareas.html')
+      loadPanel('tareas-view', 'panels/tareas/tareas.html'),
+      loadPanel('validacion-view', 'panels/validacion/validacion.html')
     ]);
   } catch (error) {
     console.error('Error cargando paneles:', error);
@@ -1718,4 +1719,168 @@ function gtInit() {
 
   // Render inicial
   gtRenderHoy();
+
+  // Validation Tab Logic
+  initValidationPanel();
+}
+
+function initValidationPanel() {
+  const checkUpdatesElectron = document.getElementById('check-updates-electron');
+  const checkUpdatesGithub = document.getElementById('check-updates-github');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const clearLogsBtn = document.getElementById('clear-logs');
+  const logsContainer = document.getElementById('logs-container');
+
+  // Tab switching
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const method = btn.dataset.method;
+
+      // Update active tab
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+
+      btn.classList.add('active');
+      document.querySelector(`.tab-content[data-method="${method}"]`)?.classList.add('active');
+
+      addLog(`Cambiado a método: ${method === 'electron-updater' ? 'Electron Updater' : 'GitHub API'}`, 'info');
+    });
+  });
+
+  // Clear logs
+  clearLogsBtn?.addEventListener('click', () => {
+    logsContainer.innerHTML = '<div class="log-entry initial">Logs borrados. Sistema listo.</div>';
+  });
+
+  // Electron Updater Check
+  checkUpdatesElectron?.addEventListener('click', async () => {
+    checkUpdatesElectron.disabled = true;
+    checkUpdatesElectron.classList.add('loading');
+
+    addLog('Iniciando verificación con Electron Updater...', 'info');
+
+    try {
+      const result = await window.electronAPI.checkUpdatesElectron();
+
+      // Add logs from result
+      if (result.logs && Array.isArray(result.logs)) {
+        result.logs.forEach(log => {
+          const type = log.includes('✓') ? 'success' : log.includes('✗') ? 'error' : 'info';
+          addLog(log, type);
+        });
+      }
+
+      // Update status
+      const statusEl = document.getElementById('update-status');
+      const availableVersionEl = document.getElementById('available-version');
+
+      if (result.success) {
+        if (result.availableVersion) {
+          statusEl.textContent = 'Actualización disponible';
+          statusEl.className = 'status-value status-available';
+          availableVersionEl.textContent = result.availableVersion;
+        } else {
+          statusEl.textContent = 'Actualizado';
+          statusEl.className = 'status-value status-idle';
+          availableVersionEl.textContent = 'Ninguna';
+        }
+      } else {
+        statusEl.textContent = 'Error en verificación';
+        statusEl.className = 'status-value status-error';
+        availableVersionEl.textContent = 'Error';
+      }
+
+      // Show result box
+      const outputSection = document.getElementById('electron-output');
+      outputSection?.classList.remove('hidden');
+      const outputLog = document.getElementById('electron-log');
+      if (outputLog) {
+        outputLog.innerHTML = (result.logs || []).join('\n');
+      }
+    } catch (error) {
+      addLog(`Error: ${error.message}`, 'error');
+    } finally {
+      checkUpdatesElectron.disabled = false;
+      checkUpdatesElectron.classList.remove('loading');
+    }
+  });
+
+  // GitHub API Check
+  checkUpdatesGithub?.addEventListener('click', async () => {
+    checkUpdatesGithub.disabled = true;
+    checkUpdatesGithub.classList.add('loading');
+
+    addLog('Iniciando verificación con GitHub API...', 'info');
+
+    try {
+      const token = document.getElementById('github-token')?.value || '';
+      const owner = document.getElementById('github-owner')?.value || 'SantiConde10';
+      const repo = document.getElementById('github-repo')?.value || 'altas_masivas';
+
+      addLog(`Parámetros: owner=${owner}, repo=${repo}, token=${token ? 'configurado' : 'no configurado'}`, 'info');
+
+      const result = await window.electronAPI.checkUpdatesGithub({ token, owner, repo });
+
+      // Add logs from result
+      if (result.logs && Array.isArray(result.logs)) {
+        result.logs.forEach(log => {
+          const type = log.includes('✓') ? 'success' : log.includes('✗') ? 'error' : 'info';
+          addLog(log, type);
+        });
+      }
+
+      // Update status
+      const statusEl = document.getElementById('update-status');
+      const availableVersionEl = document.getElementById('available-version');
+
+      if (result.success) {
+        if (result.availableVersion) {
+          statusEl.textContent = 'Actualización disponible';
+          statusEl.className = 'status-value status-available';
+          availableVersionEl.textContent = result.availableVersion;
+        } else {
+          statusEl.textContent = 'Actualizado';
+          statusEl.className = 'status-value status-idle';
+          availableVersionEl.textContent = 'Ninguna';
+        }
+      } else {
+        statusEl.textContent = 'Error en verificación';
+        statusEl.className = 'status-value status-error';
+        availableVersionEl.textContent = 'Error';
+      }
+
+      // Show result box
+      const outputSection = document.getElementById('github-output');
+      outputSection?.classList.remove('hidden');
+      const outputLog = document.getElementById('github-log');
+      if (outputLog) {
+        outputLog.innerHTML = (result.logs || []).join('\n');
+      }
+    } catch (error) {
+      addLog(`Error: ${error.message}`, 'error');
+    } finally {
+      checkUpdatesGithub.disabled = false;
+      checkUpdatesGithub.classList.remove('loading');
+    }
+  });
+
+  // Load current version
+  window.electronAPI.getAppVersion().then(version => {
+    const currentVersionEl = document.getElementById('current-version');
+    if (currentVersionEl) {
+      currentVersionEl.textContent = `v${version}`;
+    }
+    addLog(`Versión actual cargada: v${version}`, 'success');
+  }).catch(err => {
+    addLog(`Error al cargar versión: ${err.message}`, 'error');
+  });
+
+  function addLog(message, type = 'info') {
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    logsContainer?.appendChild(entry);
+    logsContainer?.scrollTo(0, logsContainer.scrollHeight);
+  }
 }
