@@ -38,7 +38,9 @@
         "dmg",
         "zip"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "sign": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": "nsis",
