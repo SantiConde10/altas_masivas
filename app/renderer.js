@@ -28,7 +28,11 @@ async function loadPanel(id, htmlPath) {
 
   } catch (error) {
     console.error('Error loading panel:', error);
-    container.innerHTML = `<p class="error">Error loading panel: ${error.message}</p>`;
+    const errorEl = document.createElement('p');
+    errorEl.className = 'error';
+    errorEl.textContent = `Error loading panel: ${error.message}`;
+    container.innerHTML = '';
+    container.appendChild(errorEl);
   }
 }
 

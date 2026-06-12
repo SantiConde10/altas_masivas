@@ -239,7 +239,10 @@ ipcMain.handle('check-updates-electron', async () => {
         logs.push(`Para testing ahora, usa el método de GitHub API.`);
       }
 
-      logs.push(`Stack: ${err.stack}`);
+      // SECURE: Only expose stack traces in development
+      if (process.env.NODE_ENV !== 'production') {
+        logs.push(`Stack: ${err.stack}`);
+      }
       resolve({ success: false, logs, availableVersion: null, error: err.message });
     });
 
@@ -394,25 +397,24 @@ ipcMain.handle('check-updates-github', async (event, { token, owner, repo }) => 
       logs.push(`\nVerifica que el repositorio existe: ${owner}/${repo}`);
     }
 
-    if (process.env.NODE_ENV === 'production') {
-      // Don't send stack trace in production
-      return {
-        success: false,
-        logs,
-        availableVersion: null,
-        error: 'Failed to check updates. Please try again.'
-      };
+    // SECURE: Never expose stack traces or detailed error info in production
+    const returnError = process.env.NODE_ENV === 'production'
+      ? 'Failed to check updates. Please try again.'
+      : error.message;
+
+    // SECURE: Only expose detailed debug info in development
+    if (process.env.NODE_ENV !== 'production') {
+      logs.push(`Tipo: ${error.code || error.name}`);
+      logs.push(`Tiempo: ${Date.now() - start}ms`);
+      logs.push(`Stack: ${error.stack}`);
     }
 
-    // In development, include more details
-    logs.push(`Tipo: ${error.code || error.name}`);
     logs.push(`Tiempo: ${Date.now() - start}ms`);
-    logs.push(`Stack: ${error.stack}`);
     return {
       success: false,
       logs,
       availableVersion: null,
-      error: error.message
+      error: returnError
     };
   }
 });
@@ -459,34 +461,85 @@ ipcMain.handle('validate-csv-file', (event, filePath) => {
       let errorOutput = '';
 
       pythonProcess.stdout.on('data', (data) => {
-        output += data.toString();
+        try {
+          output += data.toString();
+        } catch (err) {
+          // SECURE: Catch and log data processing errors without exposing details
+          console.error('Error processing stdout data:', err.message);
+        }
       });
 
       pythonProcess.stderr.on('data', (data) => {
-        errorOutput += data.toString();
+        try {
+          errorOutput += data.toString();
+        } catch (err) {
+          // SECURE: Catch and log data processing errors without exposing details
+          console.error('Error processing stderr data:', err.message);
+        }
       });
 
       pythonProcess.on('close', (exitCode) => {
-        if (exitCode === 0 && output.includes('OK')) {
-          const parts = output.trim().split('|');
-          const estTime = parts.length > 1 ? parts[1] : '';
-          resolve({ valid: true, estimatedTime: estTime });
-        } else {
-          const lines = output.split('\\n').concat(errorOutput.split('\\n'))
-            .map(l => l.trim())
-            .filter(l => l && !l.startsWith('Leyendo archivo') && !l.startsWith('Se cargaran') && l !== 'OK');
-          const reason = lines.join(' | ') || 'Error de validación desconocido';
-          resolve({ valid: false, reason });
+        try {
+          if (exitCode === 0 && output.includes('OK')) {
+            const parts = output.trim().split('|');
+            const estTime = parts.length > 1 ? parts[1] : '';
+            resolve({ valid: true, estimatedTime: estTime });
+          } else {
+            const lines = output.split('\\n').concat(errorOutput.split('\\n'))
+              .map(l => l.trim())
+              .filter(l => l && !l.startsWith('Leyendo archivo') && !l.startsWith('Se cargaran') && l !== 'OK');
+            const reason = lines.join(' | ') || 'Error de validación desconocido';
+            resolve({ valid: false, reason });
+          }
+        } catch (err) {
+          // SECURE: Catch errors during result processing
+          console.error('Error processing validation result:', err.message);
+          resolve({
+            valid: false,
+            reason: 'Error al procesar resultado de validación'
+          });
         }
       });
+
+      // SECURE: Add error handler to pythonProcess
+      pythonProcess.on('error', (err) => {
+        console.error('Python process error:', err.message);
+        resolve({
+          valid: false,
+          reason: 'No se pudo iniciar el proceso de validación'
+        });
+      });
     } catch (err) {
+      // SECURE: Catch file path validation and other setup errors
+      console.error('CSV validation setup error:', err.message);
       resolve({
         valid: false,
-        reason: err.message
+        reason: 'Error al preparar la validación del archivo'
       });
     }
   });
 });
+
+// SECURE: Filter sensitive information from logs
+function filterSensitiveInfo(logLine) {
+  // Remove paths that might reveal system structure (but keep user-facing info)
+  let filtered = logLine;
+
+  // Don't expose file system paths in production
+  if (process.env.NODE_ENV === 'production') {
+    // Remove absolute paths
+    filtered = filtered.replace(/[A-Za-z]:\\[^\s]*/g, '[path]');
+    filtered = filtered.replace(/\/[A-Za-z0-9_\/.-]*\//g, '[path]/');
+  }
+
+  // Remove tokens, API keys, or passwords (generic patterns)
+  filtered = filtered.replace(/token[=:]\s*['"]?[A-Za-z0-9_-]+['"]?/gi, 'token=[REDACTED]');
+  filtered = filtered.replace(/password[=:]\s*['"]?[A-Za-z0-9_-]+['"]?/gi, 'password=[REDACTED]');
+  filtered = filtered.replace(/api[_-]?key[=:]\s*['"]?[A-Za-z0-9_-]+['"]?/gi, 'api_key=[REDACTED]');
+  filtered = filtered.replace(/secret[=:]\s*['"]?[A-Za-z0-9_-]+['"]?/gi, 'secret=[REDACTED]');
+
+  return filtered;
+}
 
 // Handle executing the python script
 ipcMain.on('run-python-script', (event, filePath) => {
@@ -514,30 +567,72 @@ ipcMain.on('run-python-script', (event, filePath) => {
       args.push(validatedPath);
     }
 
-  console.log(`Ejecutando Python desde: ${pythonCmd}`);
-  console.log(`Args: ${args.join(' ')}`);
+    console.log(`Ejecutando Python desde: ${pythonCmd}`);
+    // SECURE: Only log args in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Args: ${args.join(' ')}`);
+    }
 
-  // We run python in unbuffered mode (-u) so we get logs immediately
-  const pythonProcess = spawn(pythonCmd, args, {
-    cwd: cwdPath
-  });
+    // We run python in unbuffered mode (-u) so we get logs immediately
+    const pythonProcess = spawn(pythonCmd, args, {
+      cwd: cwdPath
+    });
 
-  pythonProcess.stdout.on('data', (data) => {
-    event.reply('python-log', data.toString());
-    console.log(`stdout: ${data}`);
-  });
+    pythonProcess.stdout.on('data', (data) => {
+      try {
+        const logData = data.toString();
+        // SECURE: Filter sensitive information from logs before sending to renderer
+        const filteredData = filterSensitiveInfo(logData);
+        event.reply('python-log', filteredData);
+        // SECURE: Only log full data in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`stdout: ${logData}`);
+        } else {
+          console.log(`stdout: ${filteredData}`);
+        }
+      } catch (err) {
+        console.error('Error processing stdout:', err.message);
+        event.reply('python-log', 'Error al procesar salida del script');
+      }
+    });
 
-  pythonProcess.stderr.on('data', (data) => {
-    event.reply('python-error', data.toString());
-    console.error(`stderr: ${data}`);
-  });
+    pythonProcess.stderr.on('data', (data) => {
+      try {
+        const errorData = data.toString();
+        // SECURE: Filter sensitive information from error logs before sending to renderer
+        const filteredData = filterSensitiveInfo(errorData);
+        event.reply('python-error', filteredData);
+        // SECURE: Only log full data in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(`stderr: ${errorData}`);
+        } else {
+          console.error(`stderr: ${filteredData}`);
+        }
+      } catch (err) {
+        console.error('Error processing stderr:', err.message);
+        event.reply('python-error', 'Error al procesar errores del script');
+      }
+    });
 
     pythonProcess.on('close', (code) => {
-      event.reply('python-finished', code);
-      console.log(`Python process exited with code ${code}`);
+      try {
+        event.reply('python-finished', code);
+        console.log(`Python process exited with code ${code}`);
+      } catch (err) {
+        console.error('Error handling process close:', err.message);
+        event.reply('python-finished', 1);
+      }
+    });
+
+    // SECURE: Add error handler to pythonProcess
+    pythonProcess.on('error', (err) => {
+      console.error('Python process error:', err.message);
+      event.reply('python-error', 'No se pudo iniciar el script de Python');
+      event.reply('python-finished', 1);
     });
   } catch (err) {
-    event.reply('python-error', `File validation error: ${err.message}`);
+    console.error('Script execution setup error:', err.message);
+    event.reply('python-error', 'Error al preparar la ejecución del script');
     event.reply('python-finished', 1);
   }
 });
