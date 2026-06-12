@@ -1,10 +1,35 @@
 async function loadPanel(id, htmlPath) {
   const container = document.getElementById(id);
-  const response = await fetch(htmlPath);
-  if (!response.ok) {
-    throw new Error(`Error loading panel ${htmlPath}: ${response.statusText}`);
+
+  try {
+    const response = await fetch(htmlPath);
+    if (!response.ok) {
+      throw new Error(`Error loading panel ${htmlPath}: ${response.statusText}`);
+    }
+
+    const htmlText = await response.text();
+
+    // Use DOMParser for safer parsing
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    // Check for parsing errors
+    if (doc.documentElement.nodeName === 'parsererror') {
+      throw new Error(`Failed to parse HTML from ${htmlPath}`);
+    }
+
+    // Clear container and append parsed content
+    container.innerHTML = '';
+
+    // Move all child nodes from parsed document to container
+    while (doc.body.firstChild) {
+      container.appendChild(doc.body.firstChild);
+    }
+
+  } catch (error) {
+    console.error('Error loading panel:', error);
+    container.innerHTML = `<p class="error">Error loading panel: ${error.message}</p>`;
   }
-  container.innerHTML = await response.text();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

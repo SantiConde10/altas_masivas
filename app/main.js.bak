@@ -532,12 +532,8 @@ ipcMain.on('run-python-script', (event, filePath) => {
     console.error(`stderr: ${data}`);
   });
 
-    pythonProcess.on('close', (code) => {
-      event.reply('python-finished', code);
-      console.log(`Python process exited with code ${code}`);
-    });
-  } catch (err) {
-    event.reply('python-error', `File validation error: ${err.message}`);
-    event.reply('python-finished', 1);
-  }
+  pythonProcess.on('close', (code) => {
+    event.reply('python-finished', code);
+    console.log(`Python process exited with code ${code}`);
+  });
 });

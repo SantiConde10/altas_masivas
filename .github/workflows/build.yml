@@ -74,19 +74,25 @@ jobs:
 
       - name: Build Python Executable
         env:
-          APP_USERNAME: ${{ secrets.APP_USERNAME }}
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          APP_URL: ${{ secrets.APP_URL }}
+          GAIA_APP_USERNAME: ${{ secrets.APP_USERNAME }}
+          GAIA_APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          GAIA_APP_URL: ${{ secrets.APP_URL }}
         run: |
-          # Crear archivo .env con los secretos de GitHub para empaquetarlo
-          echo "APP_USERNAME=$APP_USERNAME" > .env
-          echo "APP_PASSWORD=$APP_PASSWORD" >> .env
-          echo "APP_URL=$APP_URL" >> .env
+          # SECURE: Pass secrets via environment variables only, never write to disk
+          export GAIA_APP_USERNAME="${GAIA_APP_USERNAME}"
+          export GAIA_APP_PASSWORD="${GAIA_APP_PASSWORD}"
+          export GAIA_APP_URL="${GAIA_APP_URL}"
 
           # Activamos entorno virtual y empaquetamos
           source .venv/bin/activate
-          pyinstaller --onefile --add-data ".env:." src/cli.py
+          pyinstaller --onefile src/cli.py
         shell: bash
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: |
+          rm -f .env .env.local .env.*.local
+          rm -f .envrc
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -97,16 +103,10 @@ jobs:
         working-directory: ./app
         run: npm install
 
-      - name: Inject GH_TOKEN for AutoUpdater
-        working-directory: ./app
-        env:
-          MY_GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: sed -i '' "s|%%GH_TOKEN%%|${MY_GH_TOKEN}|g" main.js
-
       - name: Build and Publish Electron App
         working-directory: ./app
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           EP_DRAFT: "false"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run build:mac -- -p always

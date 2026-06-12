@@ -8,6 +8,43 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Aseguramos que el directorio actual esté en sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+class Config:
+    """Load credentials from environment variables at runtime.
+
+    This class reads credentials on-demand from environment variables,
+    avoiding the security risk of loading secrets from .env files or
+    storing them in memory at import time.
+    """
+
+    @property
+    def username(self):
+        """Read username from environment at runtime."""
+        username = os.getenv('GAIA_APP_USERNAME')
+        if not username:
+            raise ValueError("GAIA_APP_USERNAME not configured")
+        return username
+
+    @property
+    def password(self):
+        """Read password from environment at runtime."""
+        password = os.getenv('GAIA_APP_PASSWORD')
+        if not password:
+            raise ValueError("GAIA_APP_PASSWORD not configured")
+        return password
+
+    @property
+    def app_url(self):
+        """Read app URL from environment at runtime."""
+        url = os.getenv('GAIA_APP_URL')
+        if not url:
+            raise ValueError("GAIA_APP_URL not configured")
+        return url
+
+
+# Create a global config instance to be used by other modules
+config = Config()
+
 def validate_csv(file_path):
     # Silenciamos los logs informativos para no ensuciar el stdout
     # ya que la app de Electron espera un string exacto ("OK")

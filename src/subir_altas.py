@@ -3,38 +3,21 @@ import time
 import os
 import sys
 from playwright.sync_api import Playwright, sync_playwright, expect
-from dotenv import load_dotenv
 from lectura_csv import transformar_df
+from cli import config
 import pandas as pd
 import logging
 import math
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
-# Cargar variables de entorno manejando ejecución local y empaquetada (PyInstaller)
-if getattr(sys, 'frozen', False):
-    # Si se ejecuta como ejecutable empaquetado
-    base_dir = sys._MEIPASS
-    dotenv_path = os.path.join(base_dir, ".env")
-else:
-    # Si se ejecuta como script normal
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    dotenv_path = os.path.join(base_dir, "..", "secrets", ".env")
-
-load_dotenv(dotenv_path)
-
-usuario = os.getenv("APP_USERNAME")
-password = os.getenv("APP_PASSWORD")
-url_gaia = os.getenv("APP_URL")
-
-# Validar variables de entorno requeridas
-missing_vars = []
-if not usuario: missing_vars.append("APP_USERNAME")
-if not password: missing_vars.append("APP_PASSWORD")
-if not url_gaia: missing_vars.append("APP_URL")
-
-if missing_vars:
-    logging.error(f"Faltan variables de entorno requeridas en el archivo .env: {', '.join(missing_vars)}")
+# Load credentials from environment variables at runtime
+try:
+    usuario = config.username
+    password = config.password
+    url_gaia = config.app_url
+except ValueError as e:
+    logging.error(f"Configuration error: {e}")
     sys.exit(1)
 
 custom_csv_path = sys.argv[1] if len(sys.argv) > 1 else None
