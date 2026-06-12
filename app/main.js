@@ -90,15 +90,131 @@ app.whenReady().then(() => {
   });
 
   let updateWindow = null;
+  let updateInProgress = false;
+
+  function createUpdateWindow() {
+    if (updateWindow) return;
+
+    updateWindow = new BrowserWindow({
+      width: 500,
+      height: 300,
+      parent: mainWindow,
+      modal: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      backgroundColor: '#0f172a'
+    });
+
+    const updateHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            margin: 0;
+            padding: 40px;
+            background: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+          }
+          .container {
+            text-align: center;
+          }
+          h1 {
+            font-size: 24px;
+            margin: 0 0 20px 0;
+            color: #3b82f6;
+          }
+          p {
+            font-size: 14px;
+            color: #cbd5e1;
+            margin: 10px 0;
+          }
+          .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+          }
+          .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+          }
+          .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #1e293b;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          .status {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="spinner"></div>
+          <h1>Actualizando GAIA</h1>
+          <p id="status">Descargando actualización...</p>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          <div class="status">
+            <p id="percent">0%</p>
+            <p id="speed"></p>
+          </div>
+        </div>
+        <script>
+          window.electronAPI.onUpdateProgress((data) => {
+            const percent = Math.round(data.percent);
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('percent').textContent = percent + '%';
+            const mbps = (data.bytesPerSecond / 1024 / 1024).toFixed(2);
+            document.getElementById('speed').textContent = mbps + ' MB/s';
+          });
+
+          window.electronAPI.onUpdateDownloaded(() => {
+            document.getElementById('status').textContent = 'Actualización descargada. Reiniciando...';
+            document.getElementById('progressFill').style.width = '100%';
+          });
+        </script>
+      </body>
+      </html>
+    `;
+
+    updateWindow.loadURL(`data:text/html,${encodeURIComponent(updateHTML)}`);
+    return updateWindow;
+  }
 
   // Manejo de eventos de actualización
   autoUpdater.on('update-available', (info) => {
     console.log('[AutoUpdater] Actualización disponible:', info);
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Actualización disponible',
-      message: `Nueva versión ${info.version} disponible. Se está descargando en segundo plano...`
-    });
+    updateInProgress = true;
+    createUpdateWindow();
+    if (updateWindow) {
+      updateWindow.show();
+    }
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -111,27 +227,37 @@ app.whenReady().then(() => {
         transferred: progress.transferred
       });
     }
+    if (updateWindow) {
+      updateWindow.webContents.send('update-progress', {
+        percent: progress.percent,
+        bytesPerSecond: progress.bytesPerSecond,
+        total: progress.total,
+        transferred: progress.transferred
+      });
+    }
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[AutoUpdater] Actualización descargada:', info);
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Actualización lista',
-      message: `Versión ${info.version} está lista para instalar. La aplicación se reiniciará.`,
-      buttons: ['Reiniciar y Actualizar', 'Más tarde']
-    }).then((result) => {
-      if (result.response === 0) {
-        console.log('[AutoUpdater] Usuario confirmó instalación');
+    if (updateWindow) {
+      updateWindow.webContents.send('update-downloaded');
+      setTimeout(() => {
         autoUpdater.quitAndInstall();
-      }
-    });
+      }, 2000);
+    } else {
+      autoUpdater.quitAndInstall();
+    }
   });
 
   autoUpdater.on('error', (err) => {
     console.error('[AutoUpdater] Error:', err.message);
     if (process.env.NODE_ENV !== 'production') {
       console.error('[AutoUpdater] Stack:', err.stack);
+    }
+    updateInProgress = false;
+    if (updateWindow) {
+      updateWindow.close();
+      updateWindow = null;
     }
   });
 
@@ -141,6 +267,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on('update-not-available', () => {
     console.log('[AutoUpdater] Ya está en la versión más reciente');
+    updateInProgress = false;
   });
 
   // Buscar actualizaciones al iniciar
@@ -149,8 +276,10 @@ app.whenReady().then(() => {
 
   // Reintentar cada hora
   setInterval(() => {
-    console.log('[AutoUpdater] Reintentando búsqueda de actualizaciones');
-    autoUpdater.checkForUpdatesAndNotify();
+    if (!updateInProgress) {
+      console.log('[AutoUpdater] Reintentando búsqueda de actualizaciones');
+      autoUpdater.checkForUpdatesAndNotify();
+    }
   }, 60 * 60 * 1000);
 });
 
